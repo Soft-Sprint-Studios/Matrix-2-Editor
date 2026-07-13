@@ -42,7 +42,7 @@ Specification
 		    CSG "-wadautodetect -low -estimate -noinfo"
 		    BSP "-low -estimate -noinfo"
 		    VIS "-full -low -estimate -noinfo"
-		    RAD "-extra -low -estimate -noinfo"
+		    RAD "-extra -bumpmaps -low -estimate -noinfo"
         }
 	}
 	Tool
@@ -380,6 +380,13 @@ Specification
 			Flag "-fast"
 			Description "Run in fast mode (good for quick low-quality previews)"
 		}
+
+		Parameter
+		{
+			Name "Bump Maps"
+			Flag "-bumpmaps"
+			Description "Enable Bumpmapped lightmaps."
+		}
 		
 		Parameter
 		{
@@ -666,6 +673,15 @@ Specification
 			Description "Export light sample positions in an area to a sample.pts file."
 			Type "String"
 			Value "x y z r"
+		}
+
+		Parameter
+		{
+			Name "Mod Directory"
+			Flag "-moddir"
+			Description "Specify Mod Directory."
+			Type "String"
+			Value "x
 		}
 
 		Parameter
