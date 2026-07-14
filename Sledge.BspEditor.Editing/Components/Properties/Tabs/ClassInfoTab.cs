@@ -8,6 +8,7 @@ using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using LogicAndTrick.Oy;
 using Sledge.BspEditor.Components;
 using Sledge.BspEditor.Documents;
 using Sledge.BspEditor.Modification;
@@ -15,11 +16,17 @@ using Sledge.BspEditor.Modification.Operations.Data;
 using Sledge.BspEditor.Primitives.MapObjectData;
 using Sledge.BspEditor.Primitives.MapObjects;
 using Sledge.BspEditor.Rendering.ChangeHandlers;
+using Sledge.BspEditor.Rendering.Viewport;
 using Sledge.Common.Shell.Context;
 using Sledge.Common.Translations;
 using Sledge.DataStructures.GameData;
 using Sledge.Providers.Model.Mdl10;
+using Sledge.Rendering.Cameras;
 using Sledge.Shell;
+using System.Numerics;
+using Sledge.Common;
+using Sledge.Rendering.Cameras;
+using Sledge.BspEditor.Rendering.Viewport;
 
 namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
 {
@@ -47,7 +54,8 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
 		private readonly Lazy<ClipboardManager> _clipboard;
 		private string _newTarget = null;
 		private bool _targetChanged = false;
-		public string OrderHint => "D";
+        private bool _isPointingAt = false;
+        public string OrderHint => "D";
 		public Control Control => this;
 
 		public event PropertyChangedEventHandler PropertyChanged;
@@ -153,8 +161,9 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
 
 			InitializeComponent();
 			CreateHandle();
+            Oy.Subscribe<RightClickMenuBuilder>("MapViewport:RightClick", b => { if (_isPointingAt) b.Intercepted = true; });
 
-			_tableValues = new ClassValues();
+            _tableValues = new ClassValues();
 			_document = new WeakReference<MapDocument>(null);
 		}
 		private void BtnCopy_Click(object sender, EventArgs e)
@@ -570,7 +579,50 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
 			var txt = (cmbClass.Text ?? "").ToLower();
 			ChangeClass(txt);
 		}
-		private void ChangeClass(string txt)
+
+        private void PointAtClicked(object sender, EventArgs e)
+        {
+            _isPointingAt = true;
+            btnPointAt.Text = "Click map...";
+
+            IDisposable sub = null;
+            sub = Oy.Subscribe<ViewportEvent>("MapViewport:MouseDown", async ev =>
+            {
+                _isPointingAt = false;
+                this.InvokeLater(() => btnPointAt.Text = "Point At...");
+                sub?.Dispose();
+
+                if (!_document.TryGetTarget(out var doc)) 
+					return;
+
+                Vector3 target;
+                if (ev.Sender.Is2D) target = ((OrthographicCamera)ev.Sender.Viewport.Camera).ScreenToWorld(new Vector3(ev.X, ev.Y, 0));
+                else target = ((PerspectiveCamera)ev.Sender.Viewport.Camera).CastRayFromScreen(new Vector3(ev.X, ev.Y, 0)).Item1;
+
+                var firstObj = doc.Selection.GetSelectedParents().FirstOrDefault();
+                if (firstObj == null) 
+					return;
+
+                var origin = firstObj.Data.GetOne<Origin>()?.Location ?? firstObj.BoundingBox.Center;
+                var direction = Vector3.Normalize(target - origin);
+
+                var yaw = MathHelper.RadiansToDegrees(Math.Atan2(direction.Y, direction.X));
+                var pitch = MathHelper.RadiansToDegrees(Math.Atan2(-direction.Z, Math.Sqrt(direction.X * direction.X + direction.Y * direction.Y)));
+
+                var angleString = $"{(int)Math.Round(pitch)} {(int)Math.Round(yaw)} 0";
+
+                var anglesProperty = _tableValues.FirstOrDefault(x => x.Key == "angles");
+                if (anglesProperty != null)
+                {
+                    anglesProperty.NewValue = angleString;
+                    this.InvokeLater(() => {
+                        RefreshTable();
+                        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasChanges)));
+                    });
+                }
+            });
+        }
+        private void ChangeClass(string txt)
 		{
 			if (_tableValues.NewClass == null && string.Equals(txt, _tableValues.OriginalClass.ToLower(), StringComparison.InvariantCultureIgnoreCase)) return;
 

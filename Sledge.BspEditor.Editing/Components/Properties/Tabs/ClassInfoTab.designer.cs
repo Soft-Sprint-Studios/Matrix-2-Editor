@@ -28,7 +28,8 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
 			this.lblKeyValues = new System.Windows.Forms.Label();
 			this.lblClass = new System.Windows.Forms.Label();
 			this.angAngles = new Sledge.BspEditor.Editing.Controls.AngleControl();
-			this.SuspendLayout();
+            this.btnPointAt = new System.Windows.Forms.Button();
+            this.SuspendLayout();
 			// 
 			// btnDelete
 			// 
@@ -224,11 +225,23 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
 			this.angAngles.TabIndex = 26;
 			this.angAngles.Up = true;
 			this.angAngles.AngleChangedEvent += new System.EventHandler(this.SetAngleValue);
-			// 
-			// ClassInfoTab
-			// 
-			this.BackColor = System.Drawing.SystemColors.ControlLightLight;
-			this.Controls.Add(this.angAngles);
+            // 
+            // btnPointAt
+            // 
+            this.btnPointAt.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.btnPointAt.Location = new System.Drawing.Point(403, 30);
+            this.btnPointAt.Name = "btnPointAt";
+            this.btnPointAt.Size = new System.Drawing.Size(81, 23);
+            this.btnPointAt.TabIndex = 27;
+            this.btnPointAt.Text = "Point At...";
+            this.btnPointAt.UseVisualStyleBackColor = true;
+            this.btnPointAt.Click += new System.EventHandler(this.PointAtClicked);
+            // 
+            // ClassInfoTab
+            // 
+            this.BackColor = System.Drawing.SystemColors.ControlLightLight;
+            this.Controls.Add(this.btnPointAt);
+            this.Controls.Add(this.angAngles);
 			this.Controls.Add(this.btnDelete);
 			this.Controls.Add(this.btnAdd);
 			this.Controls.Add(this.pnlSmartEdit);
@@ -269,5 +282,6 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
         private System.Windows.Forms.Label lblKeyValues;
         private System.Windows.Forms.Label lblClass;
         private Controls.AngleControl angAngles;
+        private System.Windows.Forms.Button btnPointAt;
     }
 }

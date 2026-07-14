@@ -238,7 +238,8 @@ namespace Sledge.BspEditor.Rendering.Viewport
 				_dragging = false;
 				_dragButton = e.Button;
 			}
-			ListenerDoEvent(new ViewportEvent(this, e), (l, v) => l.MouseDown(v));
+            Oy.Publish("MapViewport:MouseDown", new ViewportEvent(this, e));
+            ListenerDoEvent(new ViewportEvent(this, e), (l, v) => l.MouseDown(v));
 			_lastMouseLocationKnown = true;
 			_lastMouseLocation = new Point(e.X, e.Y);
 		}
