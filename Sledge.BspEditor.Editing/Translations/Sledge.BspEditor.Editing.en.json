@@ -92,6 +92,14 @@
         "OK": "OK",
         "Cancel": "Cancel"
       },
+      "Subdivide": {
+        "Name": "Subdivide...",
+        "Details": "Subdivide a brush into multiple parts using its bounding box.",
+        "PromptTitle": "Subdivide Brush",
+        "SubdivideAmount": "Number of divisions (per axis)",
+        "OK": "OK",
+        "Cancel": "Cancel"
+      },
       "Transform": {
         "Name": "Transform...",
         "Details": "Transform the current selection.",
