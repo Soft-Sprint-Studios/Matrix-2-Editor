@@ -107,9 +107,13 @@ namespace Sledge.BspEditor.Tools.PolygonTool
 
             var gridData = document.Map.Data.GetOne<GridData>();
             float thickness = gridData?.Grid is SquareGrid sg ? sg.Step : 16f;
+            if (thickness < 1f) 
+                thickness = 1f;
 
             var center = _points.Aggregate(Vector3.Zero, (a, b) => a + b) / _points.Count;
             var depthAxis = camera.GetUnusedCoordinate(Vector3.One);
+            if (depthAxis.LengthSquared() < 0.01f) 
+                depthAxis = Vector3.UnitZ;
             var offset = depthAxis * (thickness / 2);
 
             var bottomPoints = _points.Select(x => x - offset).ToList();

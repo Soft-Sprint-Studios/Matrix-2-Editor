@@ -141,6 +141,7 @@
     <Content Include="Resources\Menu_IgnoreGrouping.png" />
     <Content Include="Resources\Menu_ReplaceTextures.png" />
     <Content Include="Resources\Tool_Path.png" />
+    <Content Include="Resources\Tool_Polygon.png" />
     <Content Include="Resources\Tool_Prefab.png" />
     <Content Include="Translations\Sledge.BspEditor.Tools.zh_cn.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
