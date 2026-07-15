@@ -34,8 +34,7 @@ namespace Sledge.BspEditor.Tools.Sprinkle
         public SprinkleSidebarPanel()
         {
             InitializeComponent();
-            
-            // Listen for changes made via MouseWheel in the tool
+
             Oy.Subscribe<float>("SprinkleTool:RadiusChanged", r => {
                 this.InvokeLater(() => {
                     if (_radiusNum != null && _radiusNum.Value != (decimal)r)
@@ -50,7 +49,6 @@ namespace Sledge.BspEditor.Tools.Sprinkle
         {
             this.SuspendLayout();
 
-            // Type Dropdown
             var lblType = new Label { Text = "Type:", Dock = DockStyle.Top, Height = 15 };
             _typeCombo = new ComboBox { Dock = DockStyle.Top, DropDownStyle = ComboBoxStyle.DropDownList, Margin = new Padding(0, 0, 0, 10) };
             _typeCombo.SelectedIndexChanged += (s, e) => {
