@@ -95,8 +95,8 @@ namespace Sledge.BspEditor.Environment.Goldsource
 				DefaultPointEntity = GetVal(environment.Properties, "DefaultPointEntity", ""),
 				DefaultBrushEntity = GetVal(environment.Properties, "DefaultBrushEntity", ""),
 				OverrideMapSize = GetVal(environment.Properties, "OverrideMapSize", false),
-				MapSizeLow = GetVal(environment.Properties, "MapSizeLow", -4096m),
-				MapSizeHigh = GetVal(environment.Properties, "MapSizeHigh", 4096m),
+				MapSizeLow = GetVal(environment.Properties, "MapSizeLow", -32768m),
+				MapSizeHigh = GetVal(environment.Properties, "MapSizeHigh", 32768m),
 				IncludeFgdDirectoriesInEnvironment = GetVal(environment.Properties, "IncludeFgdDirectoriesInEnvironment", true),
 
 				ToolsDirectory = GetVal(environment.Properties, "ToolsDirectory", ""),

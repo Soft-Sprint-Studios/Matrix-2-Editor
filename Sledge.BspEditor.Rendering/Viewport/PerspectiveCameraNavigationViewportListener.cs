@@ -318,7 +318,23 @@ namespace Sledge.BspEditor.Rendering.Viewport
         public void MouseWheel(ViewportEvent e)
         {
             if (!Viewport.IsUnlocked(this) || e.Delta == 0) return;
-            Camera.Advance((e.Delta / (float) Math.Abs(e.Delta)) * (float) CameraNavigationViewportSettings.MouseWheelMoveDistance);
+            if (FreeLook)
+            {
+                var multiplier = e.Delta > 0 ? 1.2f : 0.8f;
+                var newSpeed = (int)(CameraNavigationViewportSettings.ForwardSpeed * multiplier);
+
+                if (newSpeed < 10) newSpeed = 10;
+                if (newSpeed > 20000) newSpeed = 20000;
+
+                CameraNavigationViewportSettings.ForwardSpeed = newSpeed;
+
+                Oy.Publish("Status:Information", $"Camera Speed: {newSpeed}");
+                e.Handled = true;
+            }
+            else
+            {
+                Camera.Advance((e.Delta / (float)Math.Abs(e.Delta)) * (float)CameraNavigationViewportSettings.MouseWheelMoveDistance);
+            }
         }
 
         public void MouseUp(ViewportEvent e)
