@@ -25,6 +25,7 @@ namespace Sledge.BspEditor.Rendering.Scene
 
         public bool ShouldRender(IPipeline pipeline, IViewport viewport)
         {
+            if (viewport.Control.Tag as string == "ModelPreview") return false;
             return true;
         }
 

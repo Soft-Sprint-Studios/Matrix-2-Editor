@@ -7,6 +7,7 @@ using System.Threading;
 using System.Windows.Forms;
 using Sledge.BspEditor.Controls.FileSystem;
 using Sledge.BspEditor.Documents;
+using Sledge.BspEditor.Editing.Components;
 using Sledge.Common.Logging;
 using Sledge.Common.Translations;
 using Sledge.DataStructures.GameData;
@@ -84,40 +85,56 @@ namespace Sledge.BspEditor.Editing.Components.Properties.SmartEdit
 			return fs;
 		}
 
-		private void OpenModelBrowser(object sender, EventArgs e)
-		{
-			if (!_root.TryGetTarget(out var rt)) return;
-			var path = rt;
-			var basePath = _textBox.Text;
-			switch (Property.VariableType)
-			{
-				case VariableType.Sound:
-					path = rt.TraversePath("sound");
-					break;
-				case VariableType.Sprite:
-					path = rt.TraversePath("sprites");
-					break;
-				case VariableType.Studio:
-					break;
-			}
-			if (!String.IsNullOrEmpty(basePath))
-			{
-				var file = path.TraversePath(basePath);
+        private void OpenModelBrowser(object sender, EventArgs e)
+        {
+            if (!_root.TryGetTarget(out var rt)) return;
+            var path = rt;
+            var basePath = _textBox.Text;
+            switch (Property.VariableType)
+            {
+                case VariableType.Sound:
+                    path = rt.TraversePath("sound");
+                    break;
+                case VariableType.Sprite:
+                    path = rt.TraversePath("sprites");
+                    break;
+                case VariableType.Studio:
+                    path = rt.TraversePath("models");
+                    break;
+            }
+            if (!String.IsNullOrEmpty(basePath))
+            {
+                var file = path.TraversePath(basePath);
 
-				var directory = Path.GetDirectoryName(file?.FullPathName);
-				path = rt.TraversePath(directory);
-			}
-			using (var fb = CreateDialog(path))
-			{
-				if (fb.ShowDialog() == DialogResult.OK && fb.SelectedFiles.Any())
-				{
-					var f = fb.SelectedFiles.First();
-					_textBox.Text = GetPath(f);
-				}
-			}
-		}
+                var directory = Path.GetDirectoryName(file?.FullPathName);
+                path = rt.TraversePath(directory);
+            }
 
-		private void PreviewSelection(object sender, EventArgs e)
+            if (Property.VariableType == VariableType.Studio)
+            {
+                using (var mb = new ModelBrowserDialog(path))
+                {
+                    if (mb.ShowDialog() == DialogResult.OK && mb.SelectedFiles.Any())
+                    {
+                        var f = mb.SelectedFiles.First();
+                        _textBox.Text = GetPath(f);
+                    }
+                }
+            }
+            else
+            {
+                using (var fb = CreateDialog(path))
+                {
+                    if (fb.ShowDialog() == DialogResult.OK && fb.SelectedFiles.Any())
+                    {
+                        var f = fb.SelectedFiles.First();
+                        _textBox.Text = GetPath(f);
+                    }
+                }
+            }
+        }
+
+        private void PreviewSelection(object sender, EventArgs e)
 		{
 			if (!_root.TryGetTarget(out var rt)) return;
 

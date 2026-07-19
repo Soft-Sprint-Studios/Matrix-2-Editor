@@ -48,6 +48,18 @@ namespace Sledge.BspEditor.Rendering.ChangeHandlers
                     if (existingEntityModel != null)
                     {
                         UpdateSequence(existingEntityModel, modelDetails);
+                        existingEntityModel.Renderable.SkinId = entity.EntityData.Get<int>("skin", 0);
+                        existingEntityModel.Renderable.BodyGroup = entity.EntityData.Get<int>("body", 0);
+
+                        var renderfx = entity.EntityData.Get<int>("renderfx", 0);
+                        var scale = 1.0f;
+                        if (renderfx == 117 || renderfx == 72 || renderfx == 118)
+                        {
+                            scale = entity.EntityData.Get<float>("scale", 1.0f);
+                            if (scale <= 0.0f) scale = 1.0f;
+                        }
+                        existingEntityModel.Renderable.Scale = scale;
+
                         entity.DescendantsChanged();
                     }
                     continue;
@@ -73,7 +85,17 @@ namespace Sledge.BspEditor.Rendering.ChangeHandlers
                 var renderable = _resourceCollection.Value.CreateModelRenderable(change.Document.Environment, model);
                 renderable.SkinId = entity.EntityData.Get<int>("skin", 0);
                 renderable.BodyGroup = entity.EntityData.Get<int>("body", 0);
-				var sd = new EntityModel(modelName, renderable);
+
+                var rfx = entity.EntityData.Get<int>("renderfx", 0);
+                var scl = 1.0f;
+                if (rfx == 117 || rfx == 72 || rfx == 118)
+                {
+                    scl = entity.EntityData.Get<float>("scale", 1.0f);
+                    if (scl <= 0.0f) scl = 1.0f;
+                }
+                renderable.Scale = scl;
+
+                var sd = new EntityModel(modelName, renderable);
                 UpdateSequence(sd, modelDetails);
 
                 entity.Data.Replace(sd);

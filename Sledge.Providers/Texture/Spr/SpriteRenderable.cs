@@ -33,15 +33,16 @@ namespace Sledge.Providers.Texture.Spr
 		}
 		public Vector3 Angles { get; set; }
 		public int Sequence { get; set; }
-		public int Framerate { get; set; } = 10;
-		public float Scale { get; set; } = 1;
-		public Vector4 Tint { get; set; } = Vector4.One;
-		public VertexFlags Flags { get; set; }
-		public int SkinId {get;set;}
-		public int BodyGroup { get; set; }
+        public int Framerate { get; set; } = 10;
+        public float Scale { get; set; } = 1;
+        public Vector4 Tint { get; set; } = Vector4.One;
+        public VertexFlags Flags { get; set; }
+        public int SkinId { get; set; }
+        public int BodyGroup { get; set; }
+        public bool IsPreview { get; set; } = false;
 
-		private SpriteLocation _location = new SpriteLocation();
-		private long _lastFrameTime;
+        private SpriteLocation _location = new SpriteLocation();
+        private long _lastFrameTime;
 
 		public SpriteRenderable(Rendering.Resources.Texture texture, TextureItem item)
 		{
@@ -144,17 +145,21 @@ namespace Sledge.Providers.Texture.Spr
 			cl.SetGraphicsResourceSet(1, _uvProjectionSet);
 		}
 
-		public bool ShouldRender(IPipeline pipeline, IViewport viewport)
-		{
-			if (pipeline.Type == PipelineType.BillboardAlpha)
-			{
-				return viewport.Camera.Type == CameraType.Perspective;
-			}
+        public bool ShouldRender(IPipeline pipeline, IViewport viewport)
+        {
+            var isModelPreviewViewport = viewport.Control.Tag as string == "ModelPreview";
+            if (isModelPreviewViewport && !IsPreview) return false;
+            if (!isModelPreviewViewport && IsPreview) return false;
 
-			return false;
-		}
+            if (pipeline.Type == PipelineType.BillboardAlpha)
+            {
+                return viewport.Camera.Type == CameraType.Perspective;
+            }
 
-		public void Update(long frame)
+            return false;
+        }
+
+        public void Update(long frame)
 		{
 			if (Framerate <= 0)
 			{

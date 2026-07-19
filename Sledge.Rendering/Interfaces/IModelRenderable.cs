@@ -18,5 +18,7 @@ namespace Sledge.Rendering.Interfaces
 		Matrix4x4 GetModelTransformation();
         (Vector3, Vector3) GetBoundingBox();
         VertexFlags Flags { get; set; }
-	}
+        bool IsPreview { get; set; }
+        float Scale { get; set; }
+    }
 }

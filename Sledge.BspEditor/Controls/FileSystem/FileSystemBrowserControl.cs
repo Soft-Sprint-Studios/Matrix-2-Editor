@@ -65,10 +65,13 @@ namespace Sledge.BspEditor.Controls.FileSystem
             set => FilterLabel.Text = value == "" ? "(none)" : value;
         }
 
+        public ListView FileListView => FileList;
+
         public string Filter
         {
             get => _filter;
-            set {
+            set
+            {
                 _filter = value;
                 _regexes.Clear();
                 _regexes.AddRange((_filter ?? "").Split(',').Select(f => new Regex("^" + Regex.Escape(f).Replace("\\*", ".*") + "$", RegexOptions.IgnoreCase | RegexOptions.Compiled)));

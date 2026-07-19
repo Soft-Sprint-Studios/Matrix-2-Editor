@@ -56,11 +56,13 @@ namespace Sledge.Providers.Model.Mdl10
 		}
 		public int BodyGroup { get; set; }
 
-		private int _lastSequence = -1;
-		public int Sequence { get; set; }
+        private int _lastSequence = -1;
+        public int Sequence { get; set; }
+        public bool IsPreview { get; set; } = false;
+        public float Scale { get; set; } = 1.0f;
 
-		public MdlModelRenderable(MdlModel model)
-		{
+        public MdlModelRenderable(MdlModel model)
+        {
 			_model = model;
 
 			_transforms = new Matrix4x4[128];
@@ -73,17 +75,18 @@ namespace Sledge.Providers.Model.Mdl10
 			_interframePercent = 0;
 		}
 
-		public Matrix4x4 GetModelTransformation()
-		{
-			Matrix4x4 yawMatrix = Matrix4x4.CreateRotationY(-Angles.X);
-			Matrix4x4 pitchMatrix = Matrix4x4.CreateRotationX(Angles.Z);
-			Matrix4x4 rollMatrix = Matrix4x4.CreateRotationZ(Angles.Y);
+        public Matrix4x4 GetModelTransformation()
+        {
+            Matrix4x4 yawMatrix = Matrix4x4.CreateRotationY(-Angles.X);
+            Matrix4x4 pitchMatrix = Matrix4x4.CreateRotationX(Angles.Z);
+            Matrix4x4 rollMatrix = Matrix4x4.CreateRotationZ(Angles.Y);
 
-			Matrix4x4 rotationMatrix = pitchMatrix * yawMatrix * rollMatrix;
-			return rotationMatrix * Matrix4x4.CreateTranslation(Origin);
-		}
+            Matrix4x4 rotationMatrix = pitchMatrix * yawMatrix * rollMatrix;
+            var scaleMatrix = Matrix4x4.CreateScale(Scale);
+            return scaleMatrix * rotationMatrix * Matrix4x4.CreateTranslation(Origin);
+        }
 
-		public (Vector3, Vector3) GetBoundingBox()
+        public (Vector3, Vector3) GetBoundingBox()
 		{
 			var (min, max) = _model.GetBoundingBox(Sequence, 0, 0);
 
@@ -143,23 +146,27 @@ namespace Sledge.Providers.Model.Mdl10
 			yield break;
 		}
 
-		public bool ShouldRender(IPipeline pipeline, IViewport viewport)
-		{
-			if (pipeline.Type == PipelineType.WireframeModel)
-			{
-				if (viewport.Camera.Type != CameraType.Orthographic) return false;
-				if (viewport.Camera is OrthographicCamera oc && oc.Zoom < 0.25f) return false;
-				return true;
-			}
-			else if (pipeline.Type == PipelineType.TexturedModel)
-			{
-				if (viewport.Camera.Type != CameraType.Perspective) return false;
-				return true;
-			}
-			return false;
-		}
+        public bool ShouldRender(IPipeline pipeline, IViewport viewport)
+        {
+            var isModelPreviewViewport = viewport.Control.Tag as string == "ModelPreview";
+            if (isModelPreviewViewport && !IsPreview) return false;
+            if (!isModelPreviewViewport && IsPreview) return false;
 
-		public void Render(RenderContext context, IPipeline pipeline, IViewport viewport, CommandList cl)
+            if (pipeline.Type == PipelineType.WireframeModel)
+            {
+                if (viewport.Camera.Type != CameraType.Orthographic) return false;
+                if (viewport.Camera is OrthographicCamera oc && oc.Zoom < 0.25f) return false;
+                return true;
+            }
+            else if (pipeline.Type == PipelineType.TexturedModel)
+            {
+                if (viewport.Camera.Type != CameraType.Perspective) return false;
+                return true;
+            }
+            return false;
+        }
+
+        public void Render(RenderContext context, IPipeline pipeline, IViewport viewport, CommandList cl)
 		{
 			if (_transformsResourceSet == null || _transformsBuffer == null) return;
 
