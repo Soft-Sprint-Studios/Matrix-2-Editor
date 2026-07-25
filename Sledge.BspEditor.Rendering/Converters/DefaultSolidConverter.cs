@@ -49,14 +49,14 @@ namespace Sledge.BspEditor.Rendering.Converters
 			var wireframe = displayFlags?.Wireframe == true;
 			var skybox = displayFlags?.ToggleSkybox == true;
 
-			// Pack the vertices like this [ f1v1 ... f1vn ] ... [ fnv1 ... fnvn ]
-			var numVertices = (uint)faces.Sum(x => x.Vertices.Count);
+            // Pack the vertices like this [ f1v1 ... f1vn ] ... [ fnv1 ... fnvn ]
+            var numVertices = (uint)faces.Sum(x => x.Displacement != null && x.Vertices.Count >= 4 ? ((1 << x.Displacement.Power) + 1) * ((1 << x.Displacement.Power) + 1) : x.Vertices.Count);
 
-			// Pack the indices like this [ solid1 ... solidn ] [ wireframe1 ... wireframe n ]
-			var numSolidIndices = (uint)faces.Sum(x => (x.Vertices.Count - 2) * 3);
-			var numWireframeIndices = numVertices * 2;
+            // Pack the indices like this [ solid1 ... solidn ] [ wireframe1 ... wireframe n ]
+            var numSolidIndices = (uint)faces.Sum(x => x.Displacement != null && x.Vertices.Count >= 4 ? ((1 << x.Displacement.Power) * (1 << x.Displacement.Power) * 6) : (x.Vertices.Count - 2) * 3);
+            var numWireframeIndices = (uint)faces.Sum(x => x.Displacement != null && x.Vertices.Count >= 4 ? (((1 << x.Displacement.Power) + 1) * (1 << x.Displacement.Power) * 4) : x.Vertices.Count * 2);
 
-			var points = new VertexStandard[numVertices];
+            var points = new VertexStandard[numVertices];
 			var shadowPoints = new VertexStandard[numVertices];
 			var indices = new uint[numSolidIndices + numWireframeIndices];
 			Color? vColor = null;
@@ -149,7 +149,99 @@ namespace Sledge.BspEditor.Rendering.Converters
 				var textureCoords = face.GetTextureCoordinates(w, h).ToList();
 
 				var normal = face.Plane.Normal;
-				for (var i = 0; i < face.Vertices.Count; i++)
+                if (face.Displacement != null && face.Vertices.Count >= 4)
+                {
+                    int power = face.Displacement.Power;
+                    int side = (1 << power) + 1;
+                    var corners = face.Displacement.Corners.ToList();
+                    var d_offs = vi;
+
+                    for (int y = 0; y < side; y++)
+                    {
+                        for (int x = 0; x < side; x++)
+                        {
+                            float fr_x = (float)x / (side - 1);
+                            float fr_y = (float)y / (side - 1);
+
+                            var top = Vector3.Lerp(corners[0], corners[1], fr_x);
+                            var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
+                            var pos = Vector3.Lerp(top, bot, fr_y);
+
+                            var topTex = Vector2.Lerp(new Vector2(textureCoords[0].Item2, textureCoords[0].Item3), new Vector2(textureCoords[1].Item2, textureCoords[1].Item3), fr_x);
+                            var botTex = Vector2.Lerp(new Vector2(textureCoords[3].Item2, textureCoords[3].Item3), new Vector2(textureCoords[2].Item2, textureCoords[2].Item3), fr_x);
+                            var tex = Vector2.Lerp(topTex, botTex, fr_y);
+
+                            pos += normal * face.Displacement.Distances[y * side + x];
+
+                            if (face.Uv1 != null && face.Uv1.Length > (y * side + x))
+                            {
+                                shadowPoints[vi] = new VertexStandard
+                                {
+                                    Position = pos,
+                                    Colour = colour,
+                                    Normal = normal,
+                                    Texture = face.Uv1[y * side + x],
+                                    Tint = tint * tintModifier,
+                                    Flags = flags | extraFlags
+                                };
+                            }
+                            else if (face.Uv1 != null)
+                            {
+                                shadowPoints[vi] = new VertexStandard
+                                {
+                                    Position = pos,
+                                    Colour = colour,
+                                    Normal = normal,
+                                    Texture = face.Uv1[0],
+                                    Tint = tint * tintModifier,
+                                    Flags = flags | extraFlags
+                                };
+                            }
+                            points[vi++] = new VertexStandard
+                            {
+                                Position = pos,
+                                Colour = colour,
+                                Normal = normal,
+                                Texture = tex,
+                                Tint = tint * tintModifier,
+                                Flags = flags | extraFlags
+                            };
+                        }
+                    }
+
+                    for (uint y = 0; y < side - 1; y++)
+                    {
+                        for (uint x = 0; x < side - 1; x++)
+                        {
+                            indices[si++] = d_offs + (y * (uint)side + x);
+                            indices[si++] = d_offs + (y * (uint)side + (x + 1));
+                            indices[si++] = d_offs + ((y + 1) * (uint)side + x);
+
+                            indices[si++] = d_offs + (y * (uint)side + (x + 1));
+                            indices[si++] = d_offs + ((y + 1) * (uint)side + (x + 1));
+                            indices[si++] = d_offs + ((y + 1) * (uint)side + x);
+                        }
+                    }
+
+                    for (uint y = 0; y < side; y++)
+                    {
+                        for (uint x = 0; x < side - 1; x++)
+                        {
+                            indices[wi++] = d_offs + (y * (uint)side + x);
+                            indices[wi++] = d_offs + (y * (uint)side + (x + 1));
+                        }
+                    }
+                    for (uint y = 0; y < side - 1; y++)
+                    {
+                        for (uint x = 0; x < side; x++)
+                        {
+                            indices[wi++] = d_offs + (y * (uint)side + x);
+                            indices[wi++] = d_offs + ((y + 1) * (uint)side + x);
+                        }
+                    }
+                    continue;
+                }
+                for (var i = 0; i < face.Vertices.Count; i++)
 				{
 
 					var v = face.Vertices[i];
@@ -200,9 +292,9 @@ namespace Sledge.BspEditor.Rendering.Converters
 			uint texOffset = 0;
 			foreach (var f in faces)
 			{
-				var texInd = (uint)(f.Vertices.Count - 2) * 3;
+                var texInd = (uint)(f.Displacement != null && f.Vertices.Count >= 4 ? ((1 << f.Displacement.Power) * (1 << f.Displacement.Power) * 6) : (f.Vertices.Count - 2) * 3);
 
-				if ((hideNull && tc.IsNullTexture(f.Texture.Name)) || (hideClip && tc.IsClipTexture(f.Texture.Name) || (skybox && f.Texture.Name.ToLower() == "sky")))
+                if ((hideNull && tc.IsNullTexture(f.Texture.Name)) || (hideClip && tc.IsClipTexture(f.Texture.Name) || (skybox && f.Texture.Name.ToLower() == "sky")))
 				{
 					texOffset += texInd;
 					continue;

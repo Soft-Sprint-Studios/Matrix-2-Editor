@@ -33,8 +33,9 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 		}
 
 		public Vector3 Origin => Vertices.Origin;
+        public Displacement Displacement { get; set; }
 
-		public Face(long id)
+        public Face(long id)
 		{
 			ID = id;
 			Texture = new Texture();
@@ -46,7 +47,31 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 			ID = obj.Get("ID", ID);
 
 			var t = obj.Children.FirstOrDefault(x => x.Name == "Texture");
-			Texture = new Texture();
+
+            var disp = obj.Children.FirstOrDefault(x => x.Name == "Displacement");
+            if (disp != null)
+            {
+                var corners = new Vector3[4];
+                var cornersStr = disp.Get("Corners", "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < 4 && i * 3 + 2 < cornersStr.Length; i++)
+                {
+                    if (float.TryParse(cornersStr[i * 3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float cx) &&
+                        float.TryParse(cornersStr[i * 3 + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float cy) &&
+                        float.TryParse(cornersStr[i * 3 + 2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float cz))
+                    {
+                        corners[i] = new Vector3(cx, cy, cz);
+                    }
+                }
+                Displacement = new Displacement(disp.Get("Power", 3), corners);
+                var dists = disp.Get("Distances", "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < dists.Length && i < Displacement.Distances.Length; i++)
+                {
+                    if (float.TryParse(dists[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f))
+                        Displacement.Distances[i] = f;
+                }
+            }
+
+            Texture = new Texture();
 
 			if (t != null)
 			{
@@ -79,7 +104,8 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 		{
 			face.Texture = Texture.Clone();
 			face.Vertices.Reset(Vertices.Select(x => x));
-		}
+            if (Displacement != null) face.Displacement = Displacement.Clone();
+        }
 
 		public IMapElement Clone()
 		{
@@ -124,7 +150,15 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 				v.Set("Position", c);
 				so.Children.Add(v);
 			}
-			return so;
+            if (Displacement != null)
+            {
+                var disp = new SerialisedObject("Displacement");
+                disp.Set("Power", Displacement.Power);
+                disp.Set("Corners", string.Join(" ", Displacement.Corners.Select(c => $"{c.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}")));
+                disp.Set("Distances", string.Join(" ", Displacement.Distances.Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+                so.Children.Add(disp);
+            }
+            return so;
 		}
 		/// <summary>
 		/// Projects relative value [0..1] onto surface world coordinates
@@ -205,46 +239,103 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 		{
 			Vertices.Transform(x => Vector3.Transform(x, matrix));
 		}
-		public Vector3? GetIntersectionPoint(Line line, bool ignoreDirection = false)
-		{
-			if (Vertices.Count < 3) return null;
+        public Vector3? GetIntersectionPoint(Line line, bool ignoreDirection = false)
+        {
+            if (Vertices.Count < 3) return null;
 
-			var plane = Plane;
-			var isect = plane.GetIntersectionPoint(line, ignoreDirection);
-			if (isect == null) return null;
+            if (Displacement != null && Vertices.Count >= 4)
+            {
+                int power = Displacement.Power;
+                int side = (1 << power) + 1;
+                var corners = Displacement.Corners.ToList();
 
-			var intersect = isect.Value;
+                Vector3? closest = null;
+                float minDist = float.MaxValue;
 
-			var vectors = Vertices;
+                for (int y = 0; y < side - 1; y++)
+                {
+                    for (int x = 0; x < side - 1; x++)
+                    {
+                        Vector3[] quad = new Vector3[4];
+                        for (int dy = 0; dy <= 1; dy++)
+                        {
+                            for (int dx = 0; dx <= 1; dx++)
+                            {
+                                int cx = x + dx;
+                                int cy = y + dy;
+                                float fr_x = (float)cx / (side - 1);
+                                float fr_y = (float)cy / (side - 1);
+                                var top = Vector3.Lerp(corners[0], corners[1], fr_x);
+                                var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
+                                var pos = Vector3.Lerp(top, bot, fr_y) + Plane.Normal * Displacement.Distances[cy * side + cx];
+                                quad[dy * 2 + dx] = pos;
+                            }
+                        }
 
-			// http://paulbourke.net/geometry/insidepoly/
+                        var tri1 = new Sledge.DataStructures.Geometric.Polygon(new[] { quad[0], quad[1], quad[3] });
+                        var isect1 = tri1.GetIntersectionPoint(line, ignoreDirection);
+                        if (isect1 != null)
+                        {
+                            float d = (isect1.Value - line.Start).LengthSquared();
+                            if (d < minDist) 
+							{ 
+								minDist = d; 
+								closest = isect1; 
+							}
+                        }
 
-			// The angle sum will be 2 * PI if the point is inside the face
-			double sum = 0;
-			for (var i = 0; i < vectors.Count; i++)
-			{
-				var i1 = i;
-				var i2 = (i + 1) % vectors.Count;
+                        var tri2 = new Sledge.DataStructures.Geometric.Polygon(new[] { quad[0], quad[3], quad[2] });
+                        var isect2 = tri2.GetIntersectionPoint(line, ignoreDirection);
+                        if (isect2 != null)
+                        {
+                            float d = (isect2.Value - line.Start).LengthSquared();
+                            if (d < minDist) 
+							{ 
+								minDist = d; 
+								closest = isect2;
+							}
+                        }
+                    }
+                }
+                return closest;
+            }
 
-				// Translate the vertices so that the intersect point is on the origin
-				var v1 = vectors[i1] - intersect;
-				var v2 = vectors[i2] - intersect;
+            var plane = Plane;
+            var isect = plane.GetIntersectionPoint(line, ignoreDirection);
+            if (isect == null) return null;
 
-				var m1 = v1.Length();
-				var m2 = v2.Length();
-				var nom = m1 * m2;
-				if (nom < 0.001f)
-				{
-					// intersection is at a vertex
-					return intersect;
-				}
-				sum += Math.Acos(v1.Dot(v2) / nom);
-			}
+            var intersect = isect.Value;
 
-			var delta = Math.Abs(sum - Math.PI * 2);
-			return (delta < 0.001d) ? intersect : (Vector3?)null;
-		}
-		public Polygon ToPolygon()
+            var vectors = Vertices;
+
+            // http://paulbourke.net/geometry/insidepoly/
+
+            // The angle sum will be 2 * PI if the point is inside the face
+            double sum = 0;
+            for (var i = 0; i < vectors.Count; i++)
+            {
+                var i1 = i;
+                var i2 = (i + 1) % vectors.Count;
+
+                // Translate the vertices so that the intersect point is on the origin
+                var v1 = vectors[i1] - intersect;
+                var v2 = vectors[i2] - intersect;
+
+                var m1 = v1.Length();
+                var m2 = v2.Length();
+                var nom = m1 * m2;
+                if (nom < 0.001f)
+                {
+                    // intersection is at a vertex
+                    return intersect;
+                }
+                sum += Math.Acos(v1.Dot(v2) / nom);
+            }
+
+            var delta = Math.Abs(sum - Math.PI * 2);
+            return (delta < 0.001d) ? intersect : (Vector3?)null;
+        }
+        public Polygon ToPolygon()
 		{
 			return new Polygon(Vertices);
 		}

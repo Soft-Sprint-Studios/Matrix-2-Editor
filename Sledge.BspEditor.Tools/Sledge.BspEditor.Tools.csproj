@@ -143,6 +143,7 @@
     <Content Include="Resources\Tool_Path.png" />
     <Content Include="Resources\Tool_Polygon.png" />
 	<Content Include="Resources\Tool_Sprinkle.png" />
+	<Content Include="Resources\Tool_Displacement.png" />
     <Content Include="Resources\Tool_Prefab.png" />
     <Content Include="Translations\Sledge.BspEditor.Tools.zh_cn.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>

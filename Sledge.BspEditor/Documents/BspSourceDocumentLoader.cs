@@ -274,7 +274,32 @@ namespace Sledge.BspEditor.Documents
 
 			await ProcessBeforeSave(map);
 
-			using (var stream = new MemoryStream())
+            if (!string.IsNullOrEmpty(location))
+            {
+                var dispPath = Path.ChangeExtension(location, ".mapdisp");
+                var dispFaces = map.Map.Root.FindAll().OfType<Solid>().SelectMany(s => s.Faces).Where(f => f.Displacement != null).ToList();
+                if (dispFaces.Any())
+                {
+                    using (var dw = new StreamWriter(dispPath))
+                    {
+                        foreach (var f in dispFaces)
+                        {
+                            dw.WriteLine("{");
+                            dw.WriteLine($"face_id {f.ID}");
+                            dw.WriteLine($"power {f.Displacement.Power}");
+                            dw.WriteLine($"corners {string.Join(" ", f.Displacement.Corners.Select(c => $"{c.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}"))}");
+                            dw.WriteLine($"distances {string.Join(" ", f.Displacement.Distances.Select(d => d.ToString(System.Globalization.CultureInfo.InvariantCulture)))}");
+                            dw.WriteLine("}");
+                        }
+                    }
+                }
+                else if (File.Exists(dispPath))
+                {
+                    File.Delete(dispPath);
+                }
+            }
+
+            using (var stream = new MemoryStream())
 			{
 				foreach (var provider in _providers.Where(x => CanSave(x.Value, location)))
 				{

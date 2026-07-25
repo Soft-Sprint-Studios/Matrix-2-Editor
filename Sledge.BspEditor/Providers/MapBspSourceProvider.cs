@@ -325,24 +325,24 @@ namespace Sledge.BspEditor.Providers
 		}
 
 
-		#endregion
+        #endregion
 
-		public Task Save(Stream stream, Map map, MapDocument document = null)
-		{
-			_document = document;
-			return Task.Factory.StartNew(() =>
-			{
-				using (var writer = new StreamWriter(stream, Encoding.ASCII, 1024, true))
-				{
-					WriteWorld(writer, map.Root);
-				}
-			});
-		}
+        public Task Save(Stream stream, Map map, MapDocument document = null)
+        {
+            _document = document;
+            return Task.Factory.StartNew(() =>
+            {
+                using (var writer = new StreamWriter(stream, Encoding.ASCII, 1024, true))
+                {
+                    WriteWorld(writer, map.Root);
+                }
+            });
+        }
 
-		#region Writing
+        #region Writing
 
 
-		private string FormatVector3(Vector3 c)
+        private string FormatVector3(Vector3 c)
 		{
 			return c.X.ToString("0.000", CultureInfo.InvariantCulture)
 				   + " " + c.Y.ToString("0.000", CultureInfo.InvariantCulture)
@@ -385,7 +385,12 @@ namespace Sledge.BspEditor.Providers
 			strings.Add(face.Texture.Rotation.ToString("0.0000", CultureInfo.InvariantCulture));
 			strings.Add(face.Texture.XScale.ToString("0.0000", CultureInfo.InvariantCulture));
 			strings.Add(face.Texture.YScale.ToString("0.0000", CultureInfo.InvariantCulture));
-			sw.WriteLine(String.Join(" ", strings));
+            if (face.Displacement != null)
+            {
+                strings.Add("face_id");
+                strings.Add(face.ID.ToString(CultureInfo.InvariantCulture));
+            }
+            sw.WriteLine(String.Join(" ", strings));
 		}
 
 		private void WriteSolid(StreamWriter sw, Solid solid)

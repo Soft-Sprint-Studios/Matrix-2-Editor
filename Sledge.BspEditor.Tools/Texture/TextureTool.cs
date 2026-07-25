@@ -141,16 +141,16 @@ namespace Sledge.BspEditor.Tools.Texture
 
             var (start, end) = camera.CastRayFromScreen(new Vector3(e.X, e.Y, 0));
             var ray = new Line(start, end);
-            
+
             var clickedFace = document.Map.Root.GetBoudingBoxIntersectionsForVisibleObjects(ray)
                 // We only care about solids
                 .OfType<Solid>()
                 // Specifically, their faces
                 .SelectMany(a => a.Faces.Select(f => new { Face = f, Solid = a }))
                 // Get the face intersection points and sort by distance from line start
-                .Select(x => new {x.Face, x.Solid, Intersection = new Polygon(x.Face.Vertices).GetIntersectionPoint(ray) })
+                .Select(x => new { x.Face, x.Solid, Intersection = x.Face.GetIntersectionPoint(ray) })
                 .Where(x => x.Intersection != null)
-                .OrderBy(x => (x.Intersection.Value - ray.Start).Length())
+                .OrderBy(x => (x.Intersection.Value - ray.Start).LengthSquared())
                 // Select the closest one.
                 .Select(x => x)
                 .FirstOrDefault();
@@ -281,8 +281,6 @@ namespace Sledge.BspEditor.Tools.Texture
         {
             base.Render(document, builder, resourceCollector);
 
-            //TODO: Selection could be changed during render process
-
             var sel = GetSelection(document);
             if (sel.IsEmpty) return;
 
@@ -291,8 +289,7 @@ namespace Sledge.BspEditor.Tools.Texture
             var groups = new List<BufferGroup>();
 
             var hideFaceMask = ShouldHideFaceMask;
-            var selectionColour = Color.FromArgb(32, Color.Red).ToVector4();
-
+            var selectionColour = Color.FromArgb(64, Color.Red).ToVector4();
 
             // Add selection highlights
             if (!hideFaceMask)
@@ -302,29 +299,72 @@ namespace Sledge.BspEditor.Tools.Texture
                     var indOffs = indices.Count;
                     var offs = verts.Count;
 
-                    verts.AddRange(face.Vertices.Select(x => new VertexStandard
+                    if (face.Displacement != null && face.Vertices.Count >= 4)
                     {
-                        Position = x, 
-                        Colour = Vector4.One, 
-                        Tint = selectionColour,
-                        Flags = VertexFlags.FlatColour
-                    }));
+                        int power = face.Displacement.Power;
+                        int side = (1 << power) + 1;
+                        var corners = face.Displacement.Corners.ToList();
 
-                    for (var i = 2; i < face.Vertices.Count; i++)
+                        for (int y = 0; y < side; y++)
+                        {
+                            for (int x = 0; x < side; x++)
+                            {
+                                float fr_x = (float)x / (side - 1);
+                                float fr_y = (float)y / (side - 1);
+                                var top = Vector3.Lerp(corners[0], corners[1], fr_x);
+                                var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
+                                var pos = Vector3.Lerp(top, bot, fr_y) + face.Plane.Normal * face.Displacement.Distances[y * side + x];
+
+                                verts.Add(new VertexStandard
+                                {
+                                    Position = pos,
+                                    Colour = Vector4.One,
+                                    Tint = selectionColour,
+                                    Flags = VertexFlags.FlatColour
+                                });
+                            }
+                        }
+
+                        for (uint y = 0; y < side - 1; y++)
+                        {
+                            for (uint x = 0; x < side - 1; x++)
+                            {
+                                indices.Add((int)(offs + (y * (uint)side + x)));
+                                indices.Add((int)(offs + (y * (uint)side + (x + 1))));
+                                indices.Add((int)(offs + ((y + 1) * (uint)side + x)));
+
+                                indices.Add((int)(offs + (y * (uint)side + (x + 1))));
+                                indices.Add((int)(offs + ((y + 1) * (uint)side + (x + 1))));
+                                indices.Add((int)(offs + ((y + 1) * (uint)side + x)));
+                            }
+                        }
+                    }
+                    else
                     {
-                        indices.Add(offs);
-                        indices.Add(offs + i - 1);
-                        indices.Add(offs + i);
+                        verts.AddRange(face.Vertices.Select(x => new VertexStandard
+                        {
+                            Position = x,
+                            Colour = Vector4.One,
+                            Tint = selectionColour,
+                            Flags = VertexFlags.FlatColour
+                        }));
+
+                        for (var i = 2; i < face.Vertices.Count; i++)
+                        {
+                            indices.Add(offs);
+                            indices.Add(offs + i - 1);
+                            indices.Add(offs + i);
+                        }
                     }
 
-                    groups.Add(new BufferGroup(PipelineType.TexturedAlpha, CameraType.Perspective, face.Origin, (uint) indOffs, (uint) (indices.Count - indOffs)));
+                    groups.Add(new BufferGroup(PipelineType.TexturedAlpha, CameraType.Perspective, face.Origin, (uint)indOffs, (uint)(indices.Count - indOffs)));
                 }
 
-                builder.Append(verts, indices.Select(x => (uint) x), groups);
+                builder.Append(verts, indices.Select(x => (uint)x), groups);
             }
 
             // Add wireframes - selection outlines and texture axes
-            var lineColour = Color.Yellow.ToVector4();
+            var lineColour = Color.Red.ToVector4();
             var uAxisColour = Color.Yellow.ToVector4();
             var vAxisColour = Color.Lime.ToVector4();
             var wfIndOffs = indices.Count;
@@ -332,28 +372,83 @@ namespace Sledge.BspEditor.Tools.Texture
             {
                 var offs = verts.Count;
 
-                // outlines
-                verts.AddRange(face.Vertices.Select(x => new VertexStandard { Position = x, Colour = lineColour, Tint = Vector4.One }));
-                for (var i = 0; i < face.Vertices.Count; i++)
+                if (face.Displacement != null && face.Vertices.Count >= 4)
                 {
-                    indices.Add(offs + i);
-                    indices.Add(offs + (i + 1) % face.Vertices.Count);
+                    int power = face.Displacement.Power;
+                    int side = (1 << power) + 1;
+                    var corners = face.Displacement.Corners.ToList();
+
+                    for (int y = 0; y < side; y++)
+                    {
+                        for (int x = 0; x < side; x++)
+                        {
+                            float fr_x = (float)x / (side - 1);
+                            float fr_y = (float)y / (side - 1);
+                            var top = Vector3.Lerp(corners[0], corners[1], fr_x);
+                            var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
+                            var pos = Vector3.Lerp(top, bot, fr_y) + face.Plane.Normal * face.Displacement.Distances[y * side + x];
+
+                            verts.Add(new VertexStandard { Position = pos, Colour = lineColour, Tint = Vector4.One });
+                        }
+                    }
+
+                    for (uint y = 0; y < side; y++)
+                    {
+                        for (uint x = 0; x < side - 1; x++)
+                        {
+                            indices.Add((int)(offs + (y * (uint)side + x)));
+                            indices.Add((int)(offs + (y * (uint)side + (x + 1))));
+                        }
+                    }
+                    for (uint y = 0; y < side - 1; y++)
+                    {
+                        for (uint x = 0; x < side; x++)
+                        {
+                            indices.Add((int)(offs + (y * (uint)side + x)));
+                            indices.Add((int)(offs + ((y + 1) * (uint)side + x)));
+                        }
+                    }
+
+                    // texture axes
+                    var lineStart = face.Origin + face.Plane.Normal * 5.0f;
+                    var uEnd = lineStart + face.Texture.UAxis * 20;
+                    var vEnd = lineStart + face.Texture.VAxis * 20;
+
+                    var axisOffs = verts.Count;
+                    verts.Add(new VertexStandard { Position = lineStart, Colour = uAxisColour, Tint = Vector4.One });
+                    verts.Add(new VertexStandard { Position = uEnd, Colour = uAxisColour, Tint = Vector4.One });
+                    verts.Add(new VertexStandard { Position = lineStart, Colour = vAxisColour, Tint = Vector4.One });
+                    verts.Add(new VertexStandard { Position = vEnd, Colour = vAxisColour, Tint = Vector4.One });
+                    indices.Add(axisOffs + 0);
+                    indices.Add(axisOffs + 1);
+                    indices.Add(axisOffs + 2);
+                    indices.Add(axisOffs + 3);
                 }
+                else
+                {
+                    // outlines
+                    verts.AddRange(face.Vertices.Select(x => new VertexStandard { Position = x, Colour = lineColour, Tint = Vector4.One }));
+                    for (var i = 0; i < face.Vertices.Count; i++)
+                    {
+                        indices.Add(offs + i);
+                        indices.Add(offs + (i + 1) % face.Vertices.Count);
+                    }
 
-                // texture axes
-                var lineStart = (face.Vertices.Aggregate(Vector3.Zero, (a, b) => a + b) / face.Vertices.Count) + face.Plane.Normal * 0.5f;
-                var uEnd = lineStart + face.Texture.UAxis * 20;
-                var vEnd = lineStart + face.Texture.VAxis * 20;
+                    // texture axes
+                    var lineStart = (face.Vertices.Aggregate(Vector3.Zero, (a, b) => a + b) / face.Vertices.Count) + face.Plane.Normal * 0.5f;
+                    var uEnd = lineStart + face.Texture.UAxis * 20;
+                    var vEnd = lineStart + face.Texture.VAxis * 20;
 
-                offs = verts.Count;
-                verts.Add(new VertexStandard { Position = lineStart, Colour = uAxisColour, Tint = Vector4.One });
-                verts.Add(new VertexStandard { Position = uEnd, Colour = uAxisColour, Tint = Vector4.One });
-                verts.Add(new VertexStandard { Position = lineStart, Colour = vAxisColour, Tint = Vector4.One });
-                verts.Add(new VertexStandard { Position = vEnd, Colour = vAxisColour, Tint = Vector4.One });
-                indices.Add(offs + 0);
-                indices.Add(offs + 1);
-                indices.Add(offs + 2);
-                indices.Add(offs + 3);
+                    var axisOffs = verts.Count;
+                    verts.Add(new VertexStandard { Position = lineStart, Colour = uAxisColour, Tint = Vector4.One });
+                    verts.Add(new VertexStandard { Position = uEnd, Colour = uAxisColour, Tint = Vector4.One });
+                    verts.Add(new VertexStandard { Position = lineStart, Colour = vAxisColour, Tint = Vector4.One });
+                    verts.Add(new VertexStandard { Position = vEnd, Colour = vAxisColour, Tint = Vector4.One });
+                    indices.Add(axisOffs + 0);
+                    indices.Add(axisOffs + 1);
+                    indices.Add(axisOffs + 2);
+                    indices.Add(axisOffs + 3);
+                }
             }
 
             groups.Add(new BufferGroup(PipelineType.Wireframe, CameraType.Perspective, (uint)wfIndOffs, (uint)(indices.Count - wfIndOffs)));

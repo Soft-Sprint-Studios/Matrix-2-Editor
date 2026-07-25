@@ -1,0 +1,132 @@
+using System;
+using System.ComponentModel.Composition;
+using System.Linq;
+using System.Windows.Forms;
+using LogicAndTrick.Oy;
+using Sledge.BspEditor.Documents;
+using Sledge.BspEditor.Modification;
+using Sledge.BspEditor.Modification.Operations.Data;
+using Sledge.BspEditor.Primitives.MapObjectData;
+using Sledge.Common.Shell.Components;
+using Sledge.Common.Shell.Context;
+
+namespace Sledge.BspEditor.Tools.Displacement
+{
+    [Export(typeof(ISidebarComponent))]
+    [OrderHint("K")]
+    public class DisplacementSidebarPanel : UserControl, ISidebarComponent
+    {
+        public string Title => "Displacements";
+        public object Control => this;
+
+        [Import] private DisplacementTool _tool;
+
+        private ComboBox _powerCombo;
+        private Button _btnCreate;
+        private Button _btnDestroy;
+        private CheckBox _chkPaint;
+        private NumericUpDown _numRadius;
+        private NumericUpDown _numAmount;
+
+        public DisplacementSidebarPanel()
+        {
+            InitializeComponent();
+            Oy.Subscribe<DisplacementTool>("DisplacementTool:FaceSelected", t => UpdateState());
+        }
+
+        private void InitializeComponent()
+        {
+            var lblPower = new Label { Text = "Power:", Top = 10, Left = 10, Width = 50 };
+            _powerCombo = new ComboBox { Top = 10, Left = 60, Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
+            _powerCombo.Items.AddRange(new object[] { "1", "2", "3", "4", "5" });
+            _powerCombo.SelectedIndex = 1;
+
+            _btnCreate = new Button { Text = "Create", Top = 40, Left = 10, Width = 80 };
+            _btnCreate.Click += BtnCreate_Click;
+
+            _btnDestroy = new Button { Text = "Destroy", Top = 40, Left = 100, Width = 80 };
+            _btnDestroy.Click += BtnDestroy_Click;
+
+            _chkPaint = new CheckBox { Text = "Paint Mode", Top = 80, Left = 10, Width = 120 };
+            _chkPaint.CheckedChanged += (s, e) => { if (_tool != null) _tool.IsPainting = _chkPaint.Checked; };
+
+            var lblRadius = new Label { Text = "Radius:", Top = 110, Left = 10, Width = 50 };
+            _numRadius = new NumericUpDown { Top = 110, Left = 60, Width = 120, Minimum = 1, Maximum = 1024, Value = 64 };
+            _numRadius.ValueChanged += (s, e) => { if (_tool != null) _tool.PaintRadius = (int)_numRadius.Value; };
+
+            var lblAmount = new Label { Text = "Amount:", Top = 140, Left = 10, Width = 50 };
+            _numAmount = new NumericUpDown { Top = 140, Left = 60, Width = 120, Minimum = 1, Maximum = 128, Value = 5 };
+            _numAmount.ValueChanged += (s, e) => { if (_tool != null) _tool.PaintAmount = (float)_numAmount.Value; };
+
+            Controls.Add(lblPower); Controls.Add(_powerCombo);
+            Controls.Add(_btnCreate); Controls.Add(_btnDestroy);
+            Controls.Add(_chkPaint);
+            Controls.Add(lblRadius); Controls.Add(_numRadius);
+            Controls.Add(lblAmount); Controls.Add(_numAmount);
+
+            Height = 180;
+            UpdateState();
+        }
+
+        public bool IsInContext(IContext context)
+        {
+            return context.TryGet("ActiveTool", out DisplacementTool _);
+        }
+
+        private void UpdateState()
+        {
+            if (InvokeRequired)
+            {
+                Invoke(new Action(UpdateState));
+                return;
+            }
+
+            if (_tool?.SelectedFace == null)
+            {
+                _btnCreate.Enabled = false;
+                _btnDestroy.Enabled = false;
+                _chkPaint.Enabled = false;
+                return;
+            }
+
+            bool hasDisp = _tool.SelectedFace.Displacement != null;
+            _btnCreate.Enabled = !hasDisp && _tool.SelectedFace.Vertices.Count >= 4;
+            _btnDestroy.Enabled = hasDisp;
+            _chkPaint.Enabled = hasDisp;
+
+            if (!_chkPaint.Enabled) _chkPaint.Checked = false;
+        }
+
+        private void BtnCreate_Click(object sender, EventArgs e)
+        {
+            if (_tool.SelectedFace == null || _tool.SelectedSolid == null) 
+                return;
+
+            var clone = (Face)_tool.SelectedFace.Clone();
+            clone.Displacement = new Primitives.MapObjectData.Displacement(_powerCombo.SelectedIndex + 2, _tool.SelectedFace.Vertices.ToArray());
+
+            MapDocumentOperation.Perform(_tool.GetDocument(), new Transaction(
+                new RemoveMapObjectData(_tool.SelectedSolid.ID, _tool.SelectedFace),
+                new AddMapObjectData(_tool.SelectedSolid.ID, clone)
+            ));
+            _tool.SelectedFace = clone;
+            UpdateState();
+        }
+
+        private void BtnDestroy_Click(object sender, EventArgs e)
+        {
+            if (_tool.SelectedFace == null || _tool.SelectedSolid == null)
+                return;
+
+            var clone = (Face)_tool.SelectedFace.Clone();
+            clone.Displacement = null;
+
+            MapDocumentOperation.Perform(_tool.GetDocument(), new Transaction(
+                new RemoveMapObjectData(_tool.SelectedSolid.ID, _tool.SelectedFace),
+                new AddMapObjectData(_tool.SelectedSolid.ID, clone)
+            ));
+            _tool.SelectedFace = clone;
+            UpdateState();
+        }
+    }
+}

@@ -183,6 +183,16 @@ namespace Sledge.BspEditor.Tools.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap Tool_Displacement {
+            get {
+                object obj = ResourceManager.GetObject("Tool_Displacement", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap Tool_Entity {
             get {
                 object obj = ResourceManager.GetObject("Tool_Entity", resourceCulture);
@@ -209,16 +219,6 @@ namespace Sledge.BspEditor.Tools.Properties {
                 return ((System.Drawing.Bitmap)(obj));
             }
         }
-
-        /// <summary>
-        ///   Looks up a localized resource of type System.Drawing.Bitmap.
-        /// </summary>
-        internal static System.Drawing.Bitmap Tool_Sprinkle {
-            get {
-                object obj = ResourceManager.GetObject("Tool_Sprinkle", resourceCulture);
-                return ((System.Drawing.Bitmap)(obj));
-            }
-        }
         
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
@@ -236,6 +236,16 @@ namespace Sledge.BspEditor.Tools.Properties {
         internal static System.Drawing.Bitmap Tool_Select {
             get {
                 object obj = ResourceManager.GetObject("Tool_Select", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
+        internal static System.Drawing.Bitmap Tool_Sprinkle {
+            get {
+                object obj = ResourceManager.GetObject("Tool_Sprinkle", resourceCulture);
                 return ((System.Drawing.Bitmap)(obj));
             }
         }

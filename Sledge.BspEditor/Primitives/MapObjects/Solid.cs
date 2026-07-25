@@ -30,9 +30,20 @@ namespace Sledge.BspEditor.Primitives.MapObjects
         protected override Box GetBoundingBox()
         {
             var faces = Faces.ToList();
-            return faces.Any(x => x.Vertices.Count > 0) ? new Box(faces.SelectMany(x => x.Vertices)) : Box.Empty;
+            var points = faces.SelectMany(x => x.Vertices).ToList();
+            foreach (var f in faces)
+            {
+                if (f.Displacement != null && f.Vertices.Count >= 4)
+                {
+                    float minD = f.Displacement.Distances.Min();
+                    float maxD = f.Displacement.Distances.Max();
+                    if (minD < 0) points.Add(f.Origin + f.Plane.Normal * minD);
+                    if (maxD > 0) points.Add(f.Origin + f.Plane.Normal * maxD);
+                }
+            }
+            return points.Any() ? new Box(points) : Box.Empty;
         }
-        
+
         public override IEnumerable<Polygon> GetPolygons()
         {
             return Faces.Select(x => x.ToPolygon());
