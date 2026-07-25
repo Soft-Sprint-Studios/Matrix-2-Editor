@@ -171,7 +171,7 @@ namespace Sledge.BspEditor.Rendering.Converters
                             var botTex = Vector2.Lerp(new Vector2(textureCoords[3].Item2, textureCoords[3].Item3), new Vector2(textureCoords[2].Item2, textureCoords[2].Item3), fr_x);
                             var tex = Vector2.Lerp(topTex, botTex, fr_y);
 
-                            pos += normal * face.Displacement.Distances[y * side + x];
+                            pos += face.Displacement.Vectors[y * side + x] * face.Displacement.Distances[y * side + x];
 
                             if (face.Uv1 != null && face.Uv1.Length > (y * side + x))
                             {

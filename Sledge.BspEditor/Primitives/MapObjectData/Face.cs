@@ -69,7 +69,17 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
                     if (float.TryParse(dists[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f))
                         Displacement.Distances[i] = f;
                 }
-            }
+                var vecs = disp.Get("Vectors", "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < vecs.Length / 3 && i < Displacement.Vectors.Length; i++)
+                {
+                    if (float.TryParse(vecs[i * 3], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float vx) &&
+                        float.TryParse(vecs[i * 3 + 1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float vy) &&
+                        float.TryParse(vecs[i * 3 + 2], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float vz))
+                    {
+                        Displacement.Vectors[i] = new Vector3(vx, vy, vz);
+                    }
+                }
+			}
 
             Texture = new Texture();
 
@@ -156,6 +166,7 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
                 disp.Set("Power", Displacement.Power);
                 disp.Set("Corners", string.Join(" ", Displacement.Corners.Select(c => $"{c.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}")));
                 disp.Set("Distances", string.Join(" ", Displacement.Distances.Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture))));
+                disp.Set("Vectors", string.Join(" ", Displacement.Vectors.Select(v => $"{v.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {v.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {v.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}")));
                 so.Children.Add(disp);
             }
             return so;
@@ -267,7 +278,7 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
                                 float fr_y = (float)cy / (side - 1);
                                 var top = Vector3.Lerp(corners[0], corners[1], fr_x);
                                 var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
-                                var pos = Vector3.Lerp(top, bot, fr_y) + Plane.Normal * Displacement.Distances[cy * side + cx];
+                                var pos = Vector3.Lerp(top, bot, fr_y) + Displacement.Vectors[cy * side + cx] * Displacement.Distances[cy * side + cx];
                                 quad[dy * 2 + dx] = pos;
                             }
                         }

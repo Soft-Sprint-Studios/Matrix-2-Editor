@@ -13,12 +13,12 @@
             "Details": "Voir et modifier les groupes VIS de la carte."
         },
         "OpenAboutWindow": {
-            "Name": "A propos de Hammertime",
+            "Name": "A propos de MatrixED",
             "Details": "Voir les informations concernant cette application."
         },
         "OpenSledgeWebsite": {
-            "Name": "Site internet de Hammertime",
-            "Details": "Aller sur le site internet de Hammertime."
+            "Name": "Site internet de MatrixED",
+            "Details": "Aller sur le site internet de MatrixED."
         },
         "OpenEntityReport": {
             "Name": "Rapport des entités",

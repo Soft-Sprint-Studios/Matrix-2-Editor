@@ -30,6 +30,13 @@ namespace Sledge.BspEditor.Tools.Displacement
     [DefaultHotkey("Shift+Y")]
     public class DisplacementTool : BaseTool
     {
+        public enum DisplacementPaintAxis
+        {
+            FaceNormal,
+            X,
+            Y,
+            Z
+        }
         public DisplacementTool()
         {
             Usage = ToolUsage.View3D;
@@ -53,6 +60,7 @@ namespace Sledge.BspEditor.Tools.Displacement
         public int PaintRadius { get; set; } = 32;
         public float PaintAmount { get; set; } = 5f;
         public bool IsPainting { get; set; } = false;
+        public DisplacementPaintAxis PaintAxis { get; set; } = DisplacementPaintAxis.FaceNormal;
 
         protected override void MouseDown(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
         {
@@ -117,11 +125,9 @@ namespace Sledge.BspEditor.Tools.Displacement
             {
                 var finalFace = (Face)_paintingFace.Clone();
 
-                // Restore original face so Sledge's delta calculator operates correctly
                 _paintingSolid.Data.Remove(_paintingFace);
                 _paintingSolid.Data.Add(_originalFace);
 
-                // Commit the entire paint stroke as a single undoable transaction
                 MapDocumentOperation.Perform(document, new Transaction(
                     new RemoveMapObjectData(_paintingSolid.ID, _originalFace),
                     new AddMapObjectData(_paintingSolid.ID, finalFace)
@@ -141,6 +147,14 @@ namespace Sledge.BspEditor.Tools.Displacement
             int side = (1 << power) + 1;
             var corners = face.Displacement.Corners.ToList();
 
+            Vector3 paintDirection = face.Plane.Normal;
+            if (PaintAxis == DisplacementPaintAxis.X) 
+                paintDirection = Vector3.UnitX;
+            else if (PaintAxis == DisplacementPaintAxis.Y) 
+                paintDirection = Vector3.UnitY;
+            else if (PaintAxis == DisplacementPaintAxis.Z) 
+                paintDirection = Vector3.UnitZ;
+
             for (int y = 0; y < side; y++)
             {
                 for (int x = 0; x < side; x++)
@@ -149,13 +163,31 @@ namespace Sledge.BspEditor.Tools.Displacement
                     float fr_y = (float)y / (side - 1);
                     var top = Vector3.Lerp(corners[0], corners[1], fr_x);
                     var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
-                    var pos = Vector3.Lerp(top, bot, fr_y) + face.Plane.Normal * face.Displacement.Distances[y * side + x];
+
+                    Vector3 currentDir = face.Displacement.Vectors[y * side + x];
+                    float currentDist = face.Displacement.Distances[y * side + x];
+                    Vector3 pos = Vector3.Lerp(top, bot, fr_y) + currentDir * currentDist;
 
                     float dist = (pos - hit).Length();
                     if (dist < PaintRadius)
                     {
                         float falloff = 1.0f - (dist / PaintRadius);
-                        face.Displacement.Distances[y * side + x] += amount * falloff;
+
+                        Vector3 currentOffset = currentDir * currentDist;
+                        Vector3 addedOffset = paintDirection * (amount * falloff);
+                        Vector3 totalOffset = currentOffset + addedOffset;
+
+                        float newDist = totalOffset.Length();
+                        if (newDist > 0.001f)
+                        {
+                            face.Displacement.Vectors[y * side + x] = Vector3.Normalize(totalOffset);
+                            face.Displacement.Distances[y * side + x] = newDist;
+                        }
+                        else
+                        {
+                            face.Displacement.Vectors[y * side + x] = paintDirection;
+                            face.Displacement.Distances[y * side + x] = 0f;
+                        }
                     }
                 }
             }
@@ -188,7 +220,7 @@ namespace Sledge.BspEditor.Tools.Displacement
                             float fr_y = (float)y / (side - 1);
                             var top = Vector3.Lerp(corners[0], corners[1], fr_x);
                             var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
-                            var pos = Vector3.Lerp(top, bot, fr_y) + SelectedFace.Plane.Normal * SelectedFace.Displacement.Distances[y * side + x];
+                            var pos = Vector3.Lerp(top, bot, fr_y) + SelectedFace.Displacement.Vectors[y * side + x] * SelectedFace.Displacement.Distances[y * side + x];
 
                             verts.Add(new VertexStandard
                             {

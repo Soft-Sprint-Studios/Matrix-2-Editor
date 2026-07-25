@@ -313,7 +313,7 @@ namespace Sledge.BspEditor.Tools.Texture
                                 float fr_y = (float)y / (side - 1);
                                 var top = Vector3.Lerp(corners[0], corners[1], fr_x);
                                 var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
-                                var pos = Vector3.Lerp(top, bot, fr_y) + face.Plane.Normal * face.Displacement.Distances[y * side + x];
+                                var pos = Vector3.Lerp(top, bot, fr_y) + face.Displacement.Vectors[y * side + x] * face.Displacement.Distances[y * side + x];
 
                                 verts.Add(new VertexStandard
                                 {
@@ -386,7 +386,7 @@ namespace Sledge.BspEditor.Tools.Texture
                             float fr_y = (float)y / (side - 1);
                             var top = Vector3.Lerp(corners[0], corners[1], fr_x);
                             var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
-                            var pos = Vector3.Lerp(top, bot, fr_y) + face.Plane.Normal * face.Displacement.Distances[y * side + x];
+                            var pos = Vector3.Lerp(top, bot, fr_y) + face.Displacement.Vectors[y * side + x] * face.Displacement.Distances[y * side + x];
 
                             verts.Add(new VertexStandard { Position = pos, Colour = lineColour, Tint = Vector4.One });
                         }

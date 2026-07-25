@@ -24,7 +24,7 @@
       "Details": "Delete all selected solid entities and move their brushes back to the world."
     },
     "OpenAboutWindow": {
-        "Name": "About Hammertime",
+        "Name": "About MatrixED",
         "Details": "View information about this application."
     },
     "OpenCheckForProblemsDialog": {
@@ -36,8 +36,8 @@
       "Details": "Open the compile dialog"
     },
     "OpenSledgeWebsite": {
-        "Name": "Hammertime repository",
-        "Details": "Go to the Hammertime repository."
+        "Name": "MatrixED repository",
+        "Details": "Go to the MatrixED repository."
     },
     "OpenEntityReport": {
       "Name": "Entity report",

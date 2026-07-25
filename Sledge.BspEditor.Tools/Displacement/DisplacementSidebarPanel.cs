@@ -9,6 +9,7 @@ using Sledge.BspEditor.Modification.Operations.Data;
 using Sledge.BspEditor.Primitives.MapObjectData;
 using Sledge.Common.Shell.Components;
 using Sledge.Common.Shell.Context;
+using static Sledge.BspEditor.Tools.Displacement.DisplacementTool;
 
 namespace Sledge.BspEditor.Tools.Displacement
 {
@@ -27,6 +28,7 @@ namespace Sledge.BspEditor.Tools.Displacement
         private CheckBox _chkPaint;
         private NumericUpDown _numRadius;
         private NumericUpDown _numAmount;
+        private ComboBox _axisCombo;
 
         public DisplacementSidebarPanel()
         {
@@ -58,13 +60,20 @@ namespace Sledge.BspEditor.Tools.Displacement
             _numAmount = new NumericUpDown { Top = 140, Left = 60, Width = 120, Minimum = 1, Maximum = 128, Value = 5 };
             _numAmount.ValueChanged += (s, e) => { if (_tool != null) _tool.PaintAmount = (float)_numAmount.Value; };
 
+            var lblAxis = new Label { Text = "Axis:", Top = 170, Left = 10, Width = 50 };
+            _axisCombo = new ComboBox { Top = 170, Left = 60, Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
+            _axisCombo.Items.AddRange(Enum.GetNames(typeof(DisplacementPaintAxis)));
+            _axisCombo.SelectedIndex = 0;
+            _axisCombo.SelectedIndexChanged += (s, e) => { if (_tool != null) _tool.PaintAxis = (DisplacementPaintAxis)_axisCombo.SelectedIndex; };
+
             Controls.Add(lblPower); Controls.Add(_powerCombo);
             Controls.Add(_btnCreate); Controls.Add(_btnDestroy);
             Controls.Add(_chkPaint);
             Controls.Add(lblRadius); Controls.Add(_numRadius);
             Controls.Add(lblAmount); Controls.Add(_numAmount);
+            Controls.Add(lblAxis); Controls.Add(_axisCombo);
 
-            Height = 180;
+            Height = 210;
             UpdateState();
         }
 

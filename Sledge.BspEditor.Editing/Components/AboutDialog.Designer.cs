@@ -82,7 +82,7 @@
 			label1.Name = "label1";
 			label1.Size = new System.Drawing.Size(258, 46);
 			label1.TabIndex = 3;
-			label1.Text = "Hammertime";
+			label1.Text = "MatrixED";
 			// 
 			// VersionLabel
 			// 
@@ -134,7 +134,7 @@
 			GithubLink.Size = new System.Drawing.Size(195, 15);
 			GithubLink.TabIndex = 6;
 			GithubLink.TabStop = true;
-			GithubLink.Text = "github.com/Duude92/hammertime";
+			GithubLink.Text = "https://github.com/Soft-Sprint-Studios/Matrix-2-Editor";
 			// 
 			// GPLLink
 			// 
@@ -281,7 +281,7 @@
 			ShowIcon = false;
 			ShowInTaskbar = false;
 			StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
-			Text = "About Hammertime";
+			Text = "About MatrixED";
 			((System.ComponentModel.ISupportInitialize)pictureBox1).EndInit();
 			ResumeLayout(false);
 			PerformLayout();
