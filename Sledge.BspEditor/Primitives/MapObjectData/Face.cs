@@ -79,6 +79,12 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
                         Displacement.Vectors[i] = new Vector3(vx, vy, vz);
                     }
                 }
+                var alphas = disp.Get("Alphas", "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                for (int i = 0; i < alphas.Length && i < Displacement.Alphas.Length; i++)
+                {
+                    if (float.TryParse(alphas[i], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float a))
+                        Displacement.Alphas[i] = a;
+                }
 			}
 
             Texture = new Texture();
@@ -167,6 +173,7 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
                 disp.Set("Corners", string.Join(" ", Displacement.Corners.Select(c => $"{c.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}")));
                 disp.Set("Distances", string.Join(" ", Displacement.Distances.Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture))));
                 disp.Set("Vectors", string.Join(" ", Displacement.Vectors.Select(v => $"{v.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {v.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {v.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}")));
+                disp.Set("Alphas", string.Join(" ", Displacement.Alphas.Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture))));
                 so.Children.Add(disp);
             }
             return so;

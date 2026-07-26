@@ -290,6 +290,7 @@ namespace Sledge.BspEditor.Documents
                             dw.WriteLine($"corners {string.Join(" ", f.Displacement.Corners.Select(c => $"{c.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}"))}");
                             dw.WriteLine($"distances {string.Join(" ", f.Displacement.Distances.Select(d => d.ToString(System.Globalization.CultureInfo.InvariantCulture)))}");
                             dw.WriteLine($"vectors {string.Join(" ", f.Displacement.Vectors.Select(v => $"{v.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {v.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {v.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}"))}");
+                            dw.WriteLine($"alphas {string.Join(" ", f.Displacement.Alphas.Select(a => a.ToString(System.Globalization.CultureInfo.InvariantCulture)))}");
                             dw.WriteLine("}");
                         }
                     }
