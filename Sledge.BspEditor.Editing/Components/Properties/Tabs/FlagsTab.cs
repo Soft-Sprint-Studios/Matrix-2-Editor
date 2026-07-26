@@ -34,6 +34,12 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
     {
         [ImportMany] private IEnumerable<Lazy<SmartEditControl>> _smartEditControls;
 
+        public string ClearAll
+        {
+            get => ClearAllButton.Text;
+            set => this.InvokeLater(() => ClearAllButton.Text = value);
+        }
+
         /// <inheritdoc />
         public string OrderHint => "H";
 
@@ -194,6 +200,14 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
 
         private void FlagsTableChanged(object sender, ItemCheckEventArgs e)
         {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasChanges)));
+        }
+        private void ClearAllButtonClicked(object sender, EventArgs e)
+        {
+            for (var i = 0; i < FlagsTable.Items.Count; i++)
+            {
+                FlagsTable.SetItemChecked(i, false);
+            }
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasChanges)));
         }
     }
