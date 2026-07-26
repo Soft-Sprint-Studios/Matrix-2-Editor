@@ -588,16 +588,26 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
             IDisposable sub = null;
             sub = Oy.Subscribe<ViewportEvent>("MapViewport:MouseDown", async ev =>
             {
+                ev.Handled = true;
                 _isPointingAt = false;
                 this.InvokeLater(() => btnPointAt.Text = "Point At...");
                 sub?.Dispose();
 
-                if (!_document.TryGetTarget(out var doc)) 
-					return;
+                if (!_document.TryGetTarget(out var doc))
+                    return;
 
                 Vector3 target;
-                if (ev.Sender.Is2D) target = ((OrthographicCamera)ev.Sender.Viewport.Camera).ScreenToWorld(new Vector3(ev.X, ev.Y, 0));
-                else target = ((PerspectiveCamera)ev.Sender.Viewport.Camera).CastRayFromScreen(new Vector3(ev.X, ev.Y, 0)).Item1;
+                if (ev.Sender.Is2D)
+                {
+                    target = ((OrthographicCamera)ev.Sender.Viewport.Camera).ScreenToWorld(new Vector3(ev.X, ev.Y, 0));
+                }
+                else
+                {
+                    var (rs, re) = ((PerspectiveCamera)ev.Sender.Viewport.Camera).CastRayFromScreen(new Vector3(ev.X, ev.Y, 0));
+                    var ray = new Sledge.DataStructures.Geometric.Line(rs, re);
+                    var (collideObject, collidePoint) = doc.Map.Root.GetIntersectionPointOnSurface(ray);
+                    target = collidePoint ?? re;
+                }
 
                 var firstObj = doc.Selection.GetSelectedParents().FirstOrDefault();
                 if (firstObj == null) 
@@ -615,6 +625,11 @@ namespace Sledge.BspEditor.Editing.Components.Properties.Tabs
                 if (anglesProperty != null)
                 {
                     anglesProperty.NewValue = angleString;
+                    var pitchProperty = _tableValues.FirstOrDefault(x => x.Key == "pitch");
+                    if (pitchProperty != null)
+                    {
+                        pitchProperty.NewValue = ((int)Math.Round(pitch)).ToString();
+                    }
                     this.InvokeLater(() => {
                         RefreshTable();
                         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(HasChanges)));

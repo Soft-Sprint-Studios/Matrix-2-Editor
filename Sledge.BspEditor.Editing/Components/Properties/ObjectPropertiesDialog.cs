@@ -282,16 +282,15 @@ namespace Sledge.BspEditor.Editing.Components.Properties
 			await UpdateSelection();
 		}
 
-		private async Task SelectionChanged(MapDocument document)
-		{
-			if (_selectedObjects.Count > 1) return;
-			await Save();
-		}
+        private async Task SelectionChanged(MapDocument document)
+        {
+            await Save();
+        }
 
-		/// <summary>
-		/// The active document has been modified, ensure the selection is still correct.
-		/// </summary>
-		private async Task DocumentChanged(Change change)
+        /// <summary>
+        /// The active document has been modified, ensure the selection is still correct.
+        /// </summary>
+        private async Task DocumentChanged(Change change)
 		{
 			// If the selection is forced, make sure any deleted objects are removed from the selection
 			_selectedObjects?.RemoveAll(x => change.Removed.Contains(x));
