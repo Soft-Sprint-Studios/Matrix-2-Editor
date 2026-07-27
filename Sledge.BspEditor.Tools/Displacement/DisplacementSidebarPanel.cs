@@ -23,6 +23,7 @@ namespace Sledge.BspEditor.Tools.Displacement
         [Import] private DisplacementTool _tool;
 
         private ComboBox _powerCombo;
+        private ComboBox _modeCombo;
         private Button _btnCreate;
         private Button _btnDestroy;
         private CheckBox _chkPaint;
@@ -52,16 +53,22 @@ namespace Sledge.BspEditor.Tools.Displacement
             _chkPaint = new CheckBox { Text = "Paint Mode", Top = 80, Left = 10, Width = 120 };
             _chkPaint.CheckedChanged += (s, e) => { if (_tool != null) _tool.IsPainting = _chkPaint.Checked; };
 
-            var lblRadius = new Label { Text = "Radius:", Top = 110, Left = 10, Width = 50 };
-            _numRadius = new NumericUpDown { Top = 110, Left = 60, Width = 120, Minimum = 1, Maximum = 1024, Value = 64 };
+            var lblMode = new Label { Text = "Mode:", Top = 110, Left = 10, Width = 50 };
+            _modeCombo = new ComboBox { Top = 110, Left = 60, Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
+            _modeCombo.Items.AddRange(Enum.GetNames(typeof(DisplacementSculptMode)));
+            _modeCombo.SelectedIndex = 0;
+            _modeCombo.SelectedIndexChanged += (s, e) => { if (_tool != null) _tool.SculptMode = (DisplacementSculptMode)_modeCombo.SelectedIndex; };
+
+            var lblRadius = new Label { Text = "Radius:", Top = 140, Left = 10, Width = 50 };
+            _numRadius = new NumericUpDown { Top = 140, Left = 60, Width = 120, Minimum = 1, Maximum = 4096, Value = 64 };
             _numRadius.ValueChanged += (s, e) => { if (_tool != null) _tool.PaintRadius = (int)_numRadius.Value; };
 
-            var lblAmount = new Label { Text = "Amount:", Top = 140, Left = 10, Width = 50 };
-            _numAmount = new NumericUpDown { Top = 140, Left = 60, Width = 120, Minimum = 1, Maximum = 128, Value = 5 };
+            var lblAmount = new Label { Text = "Amt/Dist:", Top = 170, Left = 10, Width = 60 };
+            _numAmount = new NumericUpDown { Top = 170, Left = 70, Width = 110, Minimum = -8192, Maximum = 8192, Value = 5 };
             _numAmount.ValueChanged += (s, e) => { if (_tool != null) _tool.PaintAmount = (float)_numAmount.Value; };
 
-            var lblAxis = new Label { Text = "Axis:", Top = 170, Left = 10, Width = 50 };
-            _axisCombo = new ComboBox { Top = 170, Left = 60, Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
+            var lblAxis = new Label { Text = "Axis:", Top = 200, Left = 10, Width = 50 };
+            _axisCombo = new ComboBox { Top = 200, Left = 60, Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
             _axisCombo.Items.AddRange(Enum.GetNames(typeof(DisplacementPaintAxis)));
             _axisCombo.SelectedIndex = 0;
             _axisCombo.SelectedIndexChanged += (s, e) => { if (_tool != null) _tool.PaintAxis = (DisplacementPaintAxis)_axisCombo.SelectedIndex; };
@@ -69,11 +76,12 @@ namespace Sledge.BspEditor.Tools.Displacement
             Controls.Add(lblPower); Controls.Add(_powerCombo);
             Controls.Add(_btnCreate); Controls.Add(_btnDestroy);
             Controls.Add(_chkPaint);
+            Controls.Add(lblMode); Controls.Add(_modeCombo);
             Controls.Add(lblRadius); Controls.Add(_numRadius);
             Controls.Add(lblAmount); Controls.Add(_numAmount);
             Controls.Add(lblAxis); Controls.Add(_axisCombo);
 
-            Height = 210;
+            Height = 240;
             UpdateState();
         }
 
@@ -95,6 +103,7 @@ namespace Sledge.BspEditor.Tools.Displacement
                 _btnCreate.Enabled = false;
                 _btnDestroy.Enabled = false;
                 _chkPaint.Enabled = false;
+                _modeCombo.Enabled = false;
                 return;
             }
 
@@ -102,13 +111,14 @@ namespace Sledge.BspEditor.Tools.Displacement
             _btnCreate.Enabled = !hasDisp && _tool.SelectedFace.Vertices.Count >= 4;
             _btnDestroy.Enabled = hasDisp;
             _chkPaint.Enabled = hasDisp;
+            _modeCombo.Enabled = hasDisp;
 
             if (!_chkPaint.Enabled) _chkPaint.Checked = false;
         }
 
         private void BtnCreate_Click(object sender, EventArgs e)
         {
-            if (_tool.SelectedFace == null || _tool.SelectedSolid == null) 
+            if (_tool.SelectedFace == null || _tool.SelectedSolid == null)
                 return;
 
             var clone = (Face)_tool.SelectedFace.Clone();

@@ -12,8 +12,11 @@ using Sledge.BspEditor.Modification.Operations.Data;
 using Sledge.BspEditor.Primitives.MapObjectData;
 using Sledge.BspEditor.Primitives.MapObjects;
 using Sledge.BspEditor.Rendering.Viewport;
+using Sledge.BspEditor.Tools.Properties;
 using Sledge.Common.Shell.Components;
 using Sledge.Common.Shell.Hotkeys;
+using Sledge.Common.Threading;
+using Sledge.Common.Translations;
 using Sledge.DataStructures.Geometric;
 using Sledge.Rendering.Cameras;
 using Sledge.Rendering.Pipelines;
@@ -27,6 +30,7 @@ namespace Sledge.BspEditor.Tools.Displacement
     [Export(typeof(ITool))]
     [Export]
     [OrderHint("V")]
+    [AutoTranslate]
     [DefaultHotkey("Shift+Y")]
     public class DisplacementTool : BaseTool
     {
@@ -37,9 +41,17 @@ namespace Sledge.BspEditor.Tools.Displacement
             Y,
             Z
         }
+
+        public enum DisplacementSculptMode
+        {
+            RaiseLower,
+            RaiseTo,
+            Smooth
+        }
+
         public DisplacementTool()
         {
-            Usage = ToolUsage.View3D;
+            Usage = ToolUsage.Both;
         }
 
         public override Image GetIcon() => Properties.Resources.Tool_Displacement;
@@ -48,19 +60,15 @@ namespace Sledge.BspEditor.Tools.Displacement
         public Face SelectedFace { get; set; }
         public Solid SelectedSolid { get; set; }
 
-        private Face _originalFace;
-        private Face _paintingFace;
-        private Solid _paintingSolid;
+        private Face _originalFaceState;
+        private Face _activePaintingFace;
+        private Solid _activePaintingSolid;
 
-        private Vector3? GetDisplacementIntersection(Face face, Line ray)
-        {
-            return face.GetIntersectionPoint(ray);
-        }
-
-        public int PaintRadius { get; set; } = 32;
+        public int PaintRadius { get; set; } = 64;
         public float PaintAmount { get; set; } = 5f;
         public bool IsPainting { get; set; } = false;
         public DisplacementPaintAxis PaintAxis { get; set; } = DisplacementPaintAxis.FaceNormal;
+        public DisplacementSculptMode SculptMode { get; set; } = DisplacementSculptMode.RaiseLower;
 
         protected override void MouseDown(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
         {
@@ -72,31 +80,28 @@ namespace Sledge.BspEditor.Tools.Displacement
             var clicked = document.Map.Root.GetBoudingBoxIntersectionsForVisibleObjects(ray)
                 .OfType<Solid>()
                 .SelectMany(a => a.Faces.Select(f => new { Face = f, Solid = a }))
-                .Select(x => new { x.Face, x.Solid, Intersection = GetDisplacementIntersection(x.Face, ray) })
+                .Select(x => new { x.Face, x.Solid, Intersection = x.Face.GetIntersectionPoint(ray) })
                 .Where(x => x.Intersection != null)
                 .OrderBy(x => (x.Intersection.Value - ray.Start).LengthSquared())
                 .FirstOrDefault();
 
             if (clicked == null) return;
 
-            var liveFace = clicked.Solid.Faces.FirstOrDefault(f => f.ID == clicked.Face.ID);
-            if (liveFace == null) return;
-
-            if (IsPainting && liveFace.Displacement != null && liveFace.Vertices.Count >= 4)
+            if (IsPainting && clicked.Face.Displacement != null)
             {
-                _originalFace = (Face)liveFace.Clone();
-                _paintingFace = liveFace;
-                _paintingSolid = clicked.Solid;
+                _originalFaceState = (Face)clicked.Face.Clone();
+                _activePaintingFace = clicked.Face;
+                _activePaintingSolid = clicked.Solid;
 
-                PaintDisplacement(_paintingFace, clicked.Intersection.Value, e.Button == MouseButtons.Left ? PaintAmount : -PaintAmount);
-                _paintingSolid.DescendantsChanged();
+                PaintDisplacement(_activePaintingFace, clicked.Intersection.Value, e.Button == MouseButtons.Left ? PaintAmount : -PaintAmount);
+                _activePaintingSolid.DescendantsChanged();
 
                 e.Handled = true;
                 viewport.AquireInputLock(this);
             }
             else if (e.Button == MouseButtons.Left)
             {
-                SelectedFace = liveFace;
+                SelectedFace = clicked.Face;
                 SelectedSolid = clicked.Solid;
                 Oy.Publish("DisplacementTool:FaceSelected", this);
                 e.Handled = true;
@@ -105,38 +110,40 @@ namespace Sledge.BspEditor.Tools.Displacement
 
         protected override void MouseMove(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
         {
-            if (!IsPainting || _paintingFace == null || _paintingSolid == null) return;
+            if (!IsPainting || _activePaintingFace == null) return;
             if (!Sledge.Shell.Input.KeyboardState.IsKeyDown(Keys.LButton) && !Sledge.Shell.Input.KeyboardState.IsKeyDown(Keys.RButton)) return;
 
             var (start, end) = camera.CastRayFromScreen(new Vector3(e.X, e.Y, 0));
             var ray = new Line(start, end);
 
-            var intersection = GetDisplacementIntersection(_paintingFace, ray);
+            var intersection = _activePaintingFace.GetIntersectionPoint(ray);
             if (intersection != null)
             {
-                PaintDisplacement(_paintingFace, intersection.Value, Sledge.Shell.Input.KeyboardState.IsKeyDown(Keys.LButton) ? PaintAmount : -PaintAmount);
-                _paintingSolid.DescendantsChanged();
+                PaintDisplacement(_activePaintingFace, intersection.Value, Sledge.Shell.Input.KeyboardState.IsKeyDown(Keys.LButton) ? PaintAmount : -PaintAmount);
+                _activePaintingSolid.DescendantsChanged();
             }
         }
 
         protected override void MouseUp(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
         {
-            if (_paintingFace != null && _paintingSolid != null)
+            if (_activePaintingFace != null && _activePaintingSolid != null)
             {
-                var finalFace = (Face)_paintingFace.Clone();
+                var finishedFace = (Face)_activePaintingFace.Clone();
 
-                _paintingSolid.Data.Remove(_paintingFace);
-                _paintingSolid.Data.Add(_originalFace);
+                _activePaintingFace.Texture = _originalFaceState.Texture.Clone();
+                _activePaintingFace.Displacement = _originalFaceState.Displacement?.Clone();
+                _activePaintingFace.Vertices.Clear();
+                _activePaintingFace.Vertices.AddRange(_originalFaceState.Vertices);
 
                 MapDocumentOperation.Perform(document, new Transaction(
-                    new RemoveMapObjectData(_paintingSolid.ID, _originalFace),
-                    new AddMapObjectData(_paintingSolid.ID, finalFace)
+                    new RemoveMapObjectData(_activePaintingSolid.ID, _activePaintingFace),
+                    new AddMapObjectData(_activePaintingSolid.ID, finishedFace)
                 ));
 
-                SelectedFace = finalFace;
-                _paintingFace = null;
-                _paintingSolid = null;
-                _originalFace = null;
+                SelectedFace = finishedFace;
+                _activePaintingFace = null;
+                _activePaintingSolid = null;
+                _originalFaceState = null;
             }
             viewport.ReleaseInputLock(this);
         }
@@ -148,12 +155,9 @@ namespace Sledge.BspEditor.Tools.Displacement
             var corners = face.Displacement.Corners.ToList();
 
             Vector3 paintDirection = face.Plane.Normal;
-            if (PaintAxis == DisplacementPaintAxis.X) 
-                paintDirection = Vector3.UnitX;
-            else if (PaintAxis == DisplacementPaintAxis.Y) 
-                paintDirection = Vector3.UnitY;
-            else if (PaintAxis == DisplacementPaintAxis.Z) 
-                paintDirection = Vector3.UnitZ;
+            if (PaintAxis == DisplacementPaintAxis.X) paintDirection = Vector3.UnitX;
+            else if (PaintAxis == DisplacementPaintAxis.Y) paintDirection = Vector3.UnitY;
+            else if (PaintAxis == DisplacementPaintAxis.Z) paintDirection = Vector3.UnitZ;
 
             for (int y = 0; y < side; y++)
             {
@@ -168,25 +172,41 @@ namespace Sledge.BspEditor.Tools.Displacement
                     float currentDist = face.Displacement.Distances[y * side + x];
                     Vector3 pos = Vector3.Lerp(top, bot, fr_y) + currentDir * currentDist;
 
-                    float dist = (pos - hit).Length();
-                    if (dist < PaintRadius)
+                    float distToMouse = (pos - hit).Length();
+                    if (distToMouse < PaintRadius)
                     {
-                        float falloff = 1.0f - (dist / PaintRadius);
+                        float falloff = 1.0f - (distToMouse / PaintRadius);
 
-                        Vector3 currentOffset = currentDir * currentDist;
-                        Vector3 addedOffset = paintDirection * (amount * falloff);
-                        Vector3 totalOffset = currentOffset + addedOffset;
-
-                        float newDist = totalOffset.Length();
-                        if (newDist > 0.001f)
+                        if (SculptMode == DisplacementSculptMode.RaiseLower)
                         {
-                            face.Displacement.Vectors[y * side + x] = Vector3.Normalize(totalOffset);
-                            face.Displacement.Distances[y * side + x] = newDist;
+                            Vector3 totalOffset = (currentDir * currentDist) + (paintDirection * (amount * falloff));
+                            face.Displacement.Distances[y * side + x] = totalOffset.Length();
+                            if (face.Displacement.Distances[y * side + x] > 0.001f)
+                                face.Displacement.Vectors[y * side + x] = Vector3.Normalize(totalOffset);
                         }
-                        else
+                        else if (SculptMode == DisplacementSculptMode.RaiseTo)
                         {
+                            face.Displacement.Distances[y * side + x] = PaintAmount;
                             face.Displacement.Vectors[y * side + x] = paintDirection;
-                            face.Displacement.Distances[y * side + x] = 0f;
+                        }
+                        else if (SculptMode == DisplacementSculptMode.Smooth)
+                        {
+                            float avg = 0;
+                            int count = 0;
+                            for (int dy = -1; dy <= 1; dy++)
+                            {
+                                for (int dx = -1; dx <= 1; dx++)
+                                {
+                                    int nx = x + dx, ny = y + dy;
+                                    if (nx >= 0 && nx < side && ny >= 0 && ny < side)
+                                    {
+                                        avg += face.Displacement.Distances[ny * side + nx];
+                                        count++;
+                                    }
+                                }
+                            }
+                            avg /= count;
+                            face.Displacement.Distances[y * side + x] = currentDist + (avg - currentDist) * falloff;
                         }
                     }
                 }
@@ -233,9 +253,9 @@ namespace Sledge.BspEditor.Tools.Displacement
                     }
 
                     uint si_start = (uint)indices.Count;
-                    for (uint y = 0; y < side - 1; y++)
+                    for (uint y = 0; y < (uint)side - 1; y++)
                     {
-                        for (uint x = 0; x < side - 1; x++)
+                        for (uint x = 0; x < (uint)side - 1; x++)
                         {
                             indices.Add(d_offs + (y * (uint)side + x));
                             indices.Add(d_offs + (y * (uint)side + (x + 1)));
@@ -249,17 +269,17 @@ namespace Sledge.BspEditor.Tools.Displacement
                     groups.Add(new BufferGroup(PipelineType.TexturedAlpha, CameraType.Perspective, SelectedFace.Origin, si_start, (uint)(indices.Count - si_start)));
 
                     uint wi_start = (uint)indices.Count;
-                    for (uint y = 0; y < side; y++)
+                    for (uint y = 0; y < (uint)side; y++)
                     {
-                        for (uint x = 0; x < side - 1; x++)
+                        for (uint x = 0; x < (uint)side - 1; x++)
                         {
                             indices.Add(d_offs + (y * (uint)side + x));
                             indices.Add(d_offs + (y * (uint)side + (x + 1)));
                         }
                     }
-                    for (uint y = 0; y < side - 1; y++)
+                    for (uint y = 0; y < (uint)side - 1; y++)
                     {
-                        for (uint x = 0; x < side; x++)
+                        for (uint x = 0; x < (uint)side; x++)
                         {
                             indices.Add(d_offs + (y * (uint)side + x));
                             indices.Add(d_offs + ((y + 1) * (uint)side + x));
@@ -279,7 +299,7 @@ namespace Sledge.BspEditor.Tools.Displacement
                     }));
 
                     uint si_start = (uint)indices.Count;
-                    for (uint i = 2; i < SelectedFace.Vertices.Count; i++)
+                    for (uint i = 2; i < (uint)SelectedFace.Vertices.Count; i++)
                     {
                         indices.Add(d_offs);
                         indices.Add(d_offs + i - 1);
@@ -288,7 +308,7 @@ namespace Sledge.BspEditor.Tools.Displacement
                     groups.Add(new BufferGroup(PipelineType.TexturedAlpha, CameraType.Perspective, SelectedFace.Origin, si_start, (uint)(indices.Count - si_start)));
 
                     uint wi_start = (uint)indices.Count;
-                    for (uint i = 0; i < SelectedFace.Vertices.Count; i++)
+                    for (uint i = 0; i < (uint)SelectedFace.Vertices.Count; i++)
                     {
                         indices.Add(d_offs + i);
                         indices.Add(d_offs + (i + 1) % (uint)SelectedFace.Vertices.Count);
