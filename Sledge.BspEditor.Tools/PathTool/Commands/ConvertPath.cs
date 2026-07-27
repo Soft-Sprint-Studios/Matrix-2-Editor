@@ -25,8 +25,9 @@ namespace Sledge.BspEditor.Tools.PathTool.Commands
 		{
 			context.TryGet<MapDocument>("ActiveDocument", out var document);
 			var path = parameters.Get<IEnumerable<PathState>>("SyncRoot").FirstOrDefault();
-			var entities = path.ToMapObject(document);
-			var transaction = new Transaction(new Attach(document.Map.Root.ID, entities));
+            if (path == null) return;
+            var entities = await path.ToMapObject(document);
+            var transaction = new Transaction(new Attach(document.Map.Root.ID, entities));
 
 			await MapDocumentOperation.Perform(document, transaction);
 		}

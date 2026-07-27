@@ -15,6 +15,7 @@ using System.Drawing;
 using System.Linq;
 using System.Numerics;
 using Sledge.BspEditor.Primitives.MapObjects;
+using System.Threading.Tasks;
 
 namespace Sledge.BspEditor.Tools.Draggable
 {
@@ -206,65 +207,76 @@ namespace Sledge.BspEditor.Tools.Draggable
 		{
 			return;
 		}
-		public IEnumerable<IMapObject> ToMapObject(MapDocument mapDocument)
-		{
-			var data = mapDocument.Environment.GetGameData();
-			Color color = Color.White;
-			if (data.Result != null)
-			{
-				var cls = data.Result.Classes.FirstOrDefault(x => x.Name.Equals(Property.ClassName));
-				if (cls != null)
-				{
-					var col = cls.Behaviours.Where(x => x.Name == "color").ToArray();
-					if (col.Any()) color = col[0].GetColour(0);
-				}
-			}
+        public async Task<IEnumerable<IMapObject>> ToMapObject(MapDocument mapDocument)
+        {
+            var gameData = await mapDocument.Environment.GetGameData();
+            Color color = Color.White;
 
+            var pathBaseName = string.IsNullOrWhiteSpace(Property.Name) ? "path" : Property.Name.Trim();
+            var classNameToUse = string.IsNullOrWhiteSpace(Property.ClassName) ? "path_corner" : Property.ClassName.Trim();
 
-			var result = new List<Primitives.MapObjects.Entity>();
-			var handles = Handles.ToList();
-			for (int i = 0; i < _sphereHandles.Count; i++)
-			{
-				string nextNodeName = "";
-				if (i == _sphereHandles.Count - 1)
-				{
-					if (Property.Direction != Path.PathDirection.OneWay)
-						nextNodeName = string.IsNullOrEmpty(handles[0].Name.Trim()) ? Property.Name + 0 : handles[0].Name;
-				}
-				else
-				{
-					nextNodeName = string.IsNullOrEmpty(handles[i + 1].Name.Trim()) ? Property.Name + (i + 1) : handles[i + 1].Name;
-				}
-				var entity = new Primitives.MapObjects.Entity(mapDocument.Map.NumberGenerator.Next("MapObject"))
-				{
-					Origin = handles[i].Origin,
-					Data = {
-				new EntityData
-					{
-						Name = Property.ClassName,
-						Flags = handles[i].Properties.TryGetValue("spawnflags", out var flags) && int.TryParse(flags, out var spawnFlags) ? spawnFlags : 0,
-						Properties = new Dictionary<string, string>(handles[i].Properties.Where(p => p.Key != "spawnflags")){
-							{
-								"targetname", string.IsNullOrEmpty(handles[i].Name.Trim()) ? Property.Name + i : handles[i].Name
-							},
-							{
-								"target", nextNodeName
-							}
-						}
-					},
-				new ObjectColor(color),
-					}
-				};
-				result.Add(entity);
-			}
+            if (gameData != null)
+            {
+                var cls = gameData.Classes.FirstOrDefault(x => x.Name.Equals(classNameToUse, StringComparison.InvariantCultureIgnoreCase));
+                if (cls != null)
+                {
+                    var col = cls.Behaviours.Where(x => x.Name == "color").ToArray();
+                    if (col.Any()) color = col[0].GetColour(0);
+                }
+            }
 
+            var result = new List<Primitives.MapObjects.Entity>();
+            var handles = Handles.ToList();
 
+            for (int i = 0; i < _sphereHandles.Count; i++)
+            {
+                string handleName = string.IsNullOrWhiteSpace(handles[i].Name) ? null : handles[i].Name.Trim();
+                string nextNodeName = "";
 
-			Primitives.MapObjects.Entity.FindRelationsStatic(result);
-			_sphereHandles.Clear();
-			return result;
-		}
-		public void Clear()
+                if (i == _sphereHandles.Count - 1)
+                {
+                    if (Property.Direction != Path.PathDirection.OneWay && _sphereHandles.Count > 0)
+                    {
+                        string firstHandleName = string.IsNullOrWhiteSpace(handles[0].Name) ? null : handles[0].Name.Trim();
+                        nextNodeName = firstHandleName ?? (pathBaseName + "0");
+                    }
+                }
+                else
+                {
+                    string nextHandleName = string.IsNullOrWhiteSpace(handles[i + 1].Name) ? null : handles[i + 1].Name.Trim();
+                    nextNodeName = nextHandleName ?? (pathBaseName + (i + 1));
+                }
+
+                var nodeTargetName = handleName ?? (pathBaseName + i);
+
+                var entity = new Primitives.MapObjects.Entity(mapDocument.Map.NumberGenerator.Next("MapObject"))
+                {
+                    Origin = handles[i].Origin,
+                    Data = {
+                        new EntityData
+                        {
+                            Name = classNameToUse,
+                            Flags = handles[i].Properties.TryGetValue("spawnflags", out var flags) && int.TryParse(flags, out var spawnFlags) ? spawnFlags : 0,
+                            Properties = new Dictionary<string, string>(handles[i].Properties.Where(p => p.Key != "spawnflags")){
+                                {
+                                    "targetname", nodeTargetName
+                                },
+                                {
+                                    "target", nextNodeName
+                                }
+                            }
+                        },
+                        new ObjectColor(color),
+                    }
+                };
+                result.Add(entity);
+            }
+
+            Primitives.MapObjects.Entity.FindRelationsStatic(result);
+            _sphereHandles.Clear();
+            return result;
+        }
+        public void Clear()
 		{
 			_sphereHandles.Clear();
 		}
