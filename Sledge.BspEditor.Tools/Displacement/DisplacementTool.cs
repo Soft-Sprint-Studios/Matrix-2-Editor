@@ -69,6 +69,13 @@ namespace Sledge.BspEditor.Tools.Displacement
         public bool IsPainting { get; set; } = false;
         public DisplacementPaintAxis PaintAxis { get; set; } = DisplacementPaintAxis.FaceNormal;
         public DisplacementSculptMode SculptMode { get; set; } = DisplacementSculptMode.RaiseLower;
+        protected override IEnumerable<Subscription> Subscribe()
+        {
+            yield return Oy.Subscribe<RightClickMenuBuilder>("MapViewport:RightClick", b =>
+            {
+                b.Intercepted = true;
+            });
+        }
 
         protected override void MouseDown(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
         {
@@ -96,6 +103,7 @@ namespace Sledge.BspEditor.Tools.Displacement
                 PaintDisplacement(_activePaintingFace, clicked.Intersection.Value, e.Button == MouseButtons.Left ? PaintAmount : -PaintAmount);
                 _activePaintingSolid.DescendantsChanged();
 
+                MapDocumentOperation.Bypass(document, new TrivialOperation(x => { }, c => c.Update(_activePaintingSolid)));
                 e.Handled = true;
                 viewport.AquireInputLock(this);
             }
@@ -121,6 +129,7 @@ namespace Sledge.BspEditor.Tools.Displacement
             {
                 PaintDisplacement(_activePaintingFace, intersection.Value, Sledge.Shell.Input.KeyboardState.IsKeyDown(Keys.LButton) ? PaintAmount : -PaintAmount);
                 _activePaintingSolid.DescendantsChanged();
+                MapDocumentOperation.Bypass(document, new TrivialOperation(x => { }, c => c.Update(_activePaintingSolid)));
             }
         }
 
