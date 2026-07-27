@@ -24,6 +24,8 @@ using Sledge.Rendering.Primitives;
 using Sledge.Rendering.Resources;
 using Sledge.BspEditor.Rendering.Resources;
 using Sledge.BspEditor.Modification.Operations;
+using Sledge.BspEditor.Modification.Operations.Selection;
+using System.Threading.Tasks;
 
 namespace Sledge.BspEditor.Tools.Displacement
 {
@@ -69,12 +71,36 @@ namespace Sledge.BspEditor.Tools.Displacement
         public bool IsPainting { get; set; } = false;
         public DisplacementPaintAxis PaintAxis { get; set; } = DisplacementPaintAxis.FaceNormal;
         public DisplacementSculptMode SculptMode { get; set; } = DisplacementSculptMode.RaiseLower;
+
         protected override IEnumerable<Subscription> Subscribe()
         {
             yield return Oy.Subscribe<RightClickMenuBuilder>("MapViewport:RightClick", b =>
             {
                 b.Intercepted = true;
             });
+        }
+        public override async Task ToolSelected()
+        {
+            var document = GetDocument();
+            if (document != null)
+            {
+                await MapDocumentOperation.Bypass(document, new Deselect(document.Selection));
+            }
+
+            SelectedFace = null;
+            SelectedSolid = null;
+            Oy.Publish("DisplacementTool:FaceSelected", this);
+
+            await base.ToolSelected();
+        }
+
+        public override async Task ToolDeselected()
+        {
+            SelectedFace = null;
+            SelectedSolid = null;
+            Oy.Publish("DisplacementTool:FaceSelected", this);
+
+            await base.ToolDeselected();
         }
 
         protected override void MouseDown(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
