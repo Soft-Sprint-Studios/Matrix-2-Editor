@@ -66,7 +66,8 @@ namespace Sledge.BspEditor.Tools.PathTool
 
 		private void UpdateNodes()
 		{
-			var states = States.OfType<PathState>();
+            if (_lastDocument?.Map?.Root == null) return;
+            var states = States.OfType<PathState>();
 			States.RemoveAll(state => states.Contains(state));
 			var path = _lastDocument.Map.Root.Data.Get<Path>();
 			var pathStates = path.Select(p => new PathState(this)
