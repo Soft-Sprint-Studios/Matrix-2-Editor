@@ -1,10 +1,11 @@
 using System;
 using System.Linq;
 using System.Numerics;
+using Sledge.BspEditor.Primitives;
 
 namespace Sledge.BspEditor.Primitives.MapObjectData
 {
-    public class Displacement
+    public class Displacement : ITransformable
     {
         public int Power { get; set; }
         public Vector3[] Corners { get; set; }
@@ -31,6 +32,32 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
             Array.Copy(Vectors, clone.Vectors, Vectors.Length);
             Array.Copy(Alphas, clone.Alphas, Alphas.Length);
             return clone;
+        }
+        public void Transform(Matrix4x4 matrix)
+        {
+            if (Corners != null)
+            {
+                for (int i = 0; i < Corners.Length; i++)
+                {
+                    Corners[i] = Vector3.Transform(Corners[i], matrix);
+                }
+            }
+
+            if (Vectors != null && Distances != null)
+            {
+                var zeroTransformed = Vector3.Transform(Vector3.Zero, matrix);
+                for (int i = 0; i < Vectors.Length && i < Distances.Length; i++)
+                {
+                    var offset = Vectors[i] * Distances[i];
+                    var transformedOffset = Vector3.Transform(offset, matrix) - zeroTransformed;
+                    var len = transformedOffset.Length();
+                    Distances[i] = len;
+                    if (len > 0.0001f)
+                    {
+                        Vectors[i] = Vector3.Normalize(transformedOffset);
+                    }
+                }
+            }
         }
     }
 }

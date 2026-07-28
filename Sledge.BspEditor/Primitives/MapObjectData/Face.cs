@@ -256,7 +256,8 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 		public void Transform(Matrix4x4 matrix)
 		{
 			Vertices.Transform(x => Vector3.Transform(x, matrix));
-		}
+            Displacement?.Transform(matrix);
+        }
         public Vector3? GetIntersectionPoint(Line line, bool ignoreDirection = false)
         {
             if (Vertices.Count < 3) return null;
