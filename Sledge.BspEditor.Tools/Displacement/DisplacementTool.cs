@@ -89,6 +89,7 @@ namespace Sledge.BspEditor.Tools.Displacement
 
             SelectedFace = null;
             SelectedSolid = null;
+            IsPainting = false;
             Oy.Publish("DisplacementTool:FaceSelected", this);
 
             await base.ToolSelected();
@@ -98,6 +99,7 @@ namespace Sledge.BspEditor.Tools.Displacement
         {
             SelectedFace = null;
             SelectedSolid = null;
+            IsPainting = false;
             Oy.Publish("DisplacementTool:FaceSelected", this);
 
             await base.ToolDeselected();

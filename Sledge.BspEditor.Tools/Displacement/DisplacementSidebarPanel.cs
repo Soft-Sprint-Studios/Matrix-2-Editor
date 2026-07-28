@@ -98,22 +98,22 @@ namespace Sledge.BspEditor.Tools.Displacement
                 return;
             }
 
-            if (_tool?.SelectedFace == null)
-            {
-                _btnCreate.Enabled = false;
-                _btnDestroy.Enabled = false;
-                _chkPaint.Enabled = false;
-                _modeCombo.Enabled = false;
-                return;
-            }
+            bool hasFace = _tool?.SelectedFace != null;
+            bool hasDisp = hasFace && _tool.SelectedFace.Displacement != null;
 
-            bool hasDisp = _tool.SelectedFace.Displacement != null;
-            _btnCreate.Enabled = !hasDisp && _tool.SelectedFace.Vertices.Count >= 4;
+            _btnCreate.Enabled = hasFace && !hasDisp && _tool.SelectedFace.Vertices.Count >= 4;
             _btnDestroy.Enabled = hasDisp;
             _chkPaint.Enabled = hasDisp;
             _modeCombo.Enabled = hasDisp;
+            _numRadius.Enabled = hasDisp;
+            _numAmount.Enabled = hasDisp;
+            _axisCombo.Enabled = hasDisp;
 
-            if (!_chkPaint.Enabled) _chkPaint.Checked = false;
+            if (!_chkPaint.Enabled)
+            {
+                _chkPaint.Checked = false;
+                if (_tool != null) _tool.IsPainting = false;
+            }
         }
 
         private void BtnCreate_Click(object sender, EventArgs e)
