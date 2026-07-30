@@ -7,7 +7,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Sledge.Editor</RootNamespace>
     <TargetFramework>net6.0-windows7.0</TargetFramework>
-    <AssemblyName>MatrixED.Editor</AssemblyName>
+    <AssemblyName>MatrixEditor</AssemblyName>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <TargetFrameworkProfile />
