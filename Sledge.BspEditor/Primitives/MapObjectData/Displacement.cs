@@ -12,6 +12,7 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
         public float[] Distances { get; set; }
         public Vector3[] Vectors { get; set; }
         public float[] Alphas { get; set; }
+        public string Texture2Name { get; set; } = "";
 
         public Displacement(int power, Vector3[] corners)
         {
@@ -28,6 +29,7 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
         public Displacement Clone()
         {
             var clone = new Displacement(Power, Corners);
+            clone.Texture2Name = Texture2Name;
             Array.Copy(Distances, clone.Distances, Distances.Length);
             Array.Copy(Vectors, clone.Vectors, Vectors.Length);
             Array.Copy(Alphas, clone.Alphas, Alphas.Length);

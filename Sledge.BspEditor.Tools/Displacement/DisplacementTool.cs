@@ -48,7 +48,8 @@ namespace Sledge.BspEditor.Tools.Displacement
         {
             RaiseLower,
             RaiseTo,
-            Smooth
+            Smooth,
+            Alpha
         }
 
         public DisplacementTool()
@@ -131,7 +132,7 @@ namespace Sledge.BspEditor.Tools.Displacement
                 PaintDisplacement(_activePaintingFace, clicked.Intersection.Value, e.Button == MouseButtons.Left ? PaintAmount : -PaintAmount);
                 _activePaintingSolid.DescendantsChanged();
 
-                MapDocumentOperation.Bypass(document, new TrivialOperation(x => { }, c => c.Update(_activePaintingSolid)));
+                Oy.Publish("MapDocument:Changed", new Change(document).Update(_activePaintingSolid));
                 e.Handled = true;
                 viewport.AquireInputLock(this);
             }
@@ -157,7 +158,7 @@ namespace Sledge.BspEditor.Tools.Displacement
             {
                 PaintDisplacement(_activePaintingFace, intersection.Value, Sledge.Shell.Input.KeyboardState.IsKeyDown(Keys.LButton) ? PaintAmount : -PaintAmount);
                 _activePaintingSolid.DescendantsChanged();
-                MapDocumentOperation.Bypass(document, new TrivialOperation(x => { }, c => c.Update(_activePaintingSolid)));
+                Oy.Publish("MapDocument:Changed", new Change(document).Update(_activePaintingSolid));
             }
         }
 
@@ -190,6 +191,17 @@ namespace Sledge.BspEditor.Tools.Displacement
             int power = face.Displacement.Power;
             int side = (1 << power) + 1;
             var corners = face.Displacement.Corners.ToList();
+
+            int totalVerts = side * side;
+            if (face.Displacement.Alphas == null || face.Displacement.Alphas.Length != totalVerts)
+            {
+                var newAlphas = new float[totalVerts];
+                if (face.Displacement.Alphas != null)
+                {
+                    Array.Copy(face.Displacement.Alphas, newAlphas, Math.Min(face.Displacement.Alphas.Length, totalVerts));
+                }
+                face.Displacement.Alphas = newAlphas;
+            }
 
             Vector3 paintDirection = face.Plane.Normal;
             if (PaintAxis == DisplacementPaintAxis.X) paintDirection = Vector3.UnitX;
@@ -244,6 +256,12 @@ namespace Sledge.BspEditor.Tools.Displacement
                             }
                             avg /= count;
                             face.Displacement.Distances[y * side + x] = currentDist + (avg - currentDist) * falloff;
+                        }
+                        else if (SculptMode == DisplacementSculptMode.Alpha)
+                        {
+                            float currentAlpha = face.Displacement.Alphas[y * side + x];
+                            float newAlpha = Math.Clamp(currentAlpha + (amount * falloff * 10f), 0f, 255f);
+                            face.Displacement.Alphas[y * side + x] = newAlpha;
                         }
                     }
                 }

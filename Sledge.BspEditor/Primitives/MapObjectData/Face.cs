@@ -63,6 +63,7 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
                     }
                 }
                 Displacement = new Displacement(disp.Get("Power", 3), corners);
+                Displacement.Texture2Name = disp.Get("Texture2Name", "");
                 var dists = disp.Get("Distances", "").Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 for (int i = 0; i < dists.Length && i < Displacement.Distances.Length; i++)
                 {
@@ -170,6 +171,7 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
             {
                 var disp = new SerialisedObject("Displacement");
                 disp.Set("Power", Displacement.Power);
+                disp.Set("Texture2Name", Displacement.Texture2Name ?? "");
                 disp.Set("Corners", string.Join(" ", Displacement.Corners.Select(c => $"{c.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {c.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}")));
                 disp.Set("Distances", string.Join(" ", Displacement.Distances.Select(x => x.ToString(System.Globalization.CultureInfo.InvariantCulture))));
                 disp.Set("Vectors", string.Join(" ", Displacement.Vectors.Select(v => $"{v.X.ToString(System.Globalization.CultureInfo.InvariantCulture)} {v.Y.ToString(System.Globalization.CultureInfo.InvariantCulture)} {v.Z.ToString(System.Globalization.CultureInfo.InvariantCulture)}")));

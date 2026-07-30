@@ -300,9 +300,16 @@ namespace Sledge.BspEditor.Rendering.Converters
 					continue;
 				}
 
-				var opacity = tc.GetOpacity(f.Texture.Name);
-				var t = await tc.GetTextureItem(f.Texture.Name);
-				var transparent = entityHasTransparency || opacity < 0.95f || t?.Flags.HasFlag(TextureFlags.Transparent) == true;
+                string primaryTexName = f.Texture.Name;
+                if (f.Texture.Name.Contains("_blend_", StringComparison.OrdinalIgnoreCase))
+                {
+                    var parts = f.Texture.Name.Split(new[] { "_blend_" }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length >= 1) primaryTexName = parts[0];
+                }
+
+                var opacity = tc.GetOpacity(primaryTexName);
+                var t = await tc.GetTextureItem(primaryTexName);
+                var transparent = entityHasTransparency || opacity < 0.95f || t?.Flags.HasFlag(TextureFlags.Transparent) == true;
 
 				var texture = t == null ? string.Empty : $"{document.Environment.ID}::{f.Texture.Name}";
 				BufferGroup group;
@@ -333,7 +340,79 @@ namespace Sledge.BspEditor.Rendering.Converters
 			builder.Append(points, indices, groups);
 			builder.Append(shadowPoints, indices, shadowGroups);
 
-			if (wireframe)
+            foreach (var face in faces)
+            {
+                if (face.Displacement != null && face.Vertices.Count >= 4 && !string.IsNullOrWhiteSpace(face.Displacement.Texture2Name))
+                {
+                    var t2 = await tc.GetTextureItem(face.Displacement.Texture2Name);
+                    if (t2 != null)
+                    {
+                        resourceCollector.RequireTexture(t2.Name);
+
+                        int power = face.Displacement.Power;
+                        int side = (1 << power) + 1;
+                        var corners = face.Displacement.Corners.ToList();
+                        var normal = face.Plane.Normal;
+
+                        var pass2Verts = new List<VertexStandard>();
+                        var pass2Indices = new List<uint>();
+
+                        var t2W = t2.Width;
+                        var t2H = t2.Height;
+                        var t2Coords = face.GetTextureCoordinates(t2W, t2H).ToList();
+
+                        for (int y = 0; y < side; y++)
+                        {
+                            for (int x = 0; x < side; x++)
+                            {
+                                float fr_x = (float)x / (side - 1);
+                                float fr_y = (float)y / (side - 1);
+                                var top = Vector3.Lerp(corners[0], corners[1], fr_x);
+                                var bot = Vector3.Lerp(corners[3], corners[2], fr_x);
+                                var pos = Vector3.Lerp(top, bot, fr_y) + face.Displacement.Vectors[y * side + x] * face.Displacement.Distances[y * side + x];
+
+                                var topTex = Vector2.Lerp(new Vector2(t2Coords[0].Item2, t2Coords[0].Item3), new Vector2(t2Coords[1].Item2, t2Coords[1].Item3), fr_x);
+                                var botTex = Vector2.Lerp(new Vector2(t2Coords[3].Item2, t2Coords[3].Item3), new Vector2(t2Coords[2].Item2, t2Coords[2].Item3), fr_x);
+                                var tex2 = Vector2.Lerp(topTex, botTex, fr_y);
+
+                                float alphaRatio = (face.Displacement.Alphas != null && face.Displacement.Alphas.Length > (y * side + x))
+                                    ? face.Displacement.Alphas[y * side + x] / 255.0f
+                                    : 0f;
+
+                                pass2Verts.Add(new VertexStandard
+                                {
+                                    Position = pos + (normal * 0.1f),
+                                    Colour = colour,
+                                    Normal = normal,
+                                    Texture = tex2,
+                                    Tint = new Vector4(tint.X, tint.Y, tint.Z, alphaRatio * tint.W),
+                                    Flags = flags
+                                });
+                            }
+                        }
+
+                        for (uint y = 0; y < (uint)side - 1; y++)
+                        {
+                            for (uint x = 0; x < (uint)side - 1; x++)
+                            {
+                                pass2Indices.Add(y * (uint)side + x);
+                                pass2Indices.Add(y * (uint)side + (x + 1));
+                                pass2Indices.Add((y + 1) * (uint)side + x);
+
+                                pass2Indices.Add(y * (uint)side + (x + 1));
+                                pass2Indices.Add((y + 1) * (uint)side + (x + 1));
+                                pass2Indices.Add((y + 1) * (uint)side + x);
+                            }
+                        }
+
+                        string tex2Binding = $"{document.Environment.ID}::{face.Displacement.Texture2Name}";
+                        var pass2Group = new BufferGroup(PipelineType.TexturedAlpha, CameraType.Perspective, true, face.Origin, tex2Binding, 0, (uint)pass2Indices.Count);
+                        builder.Append(pass2Verts, pass2Indices, new[] { pass2Group });
+                    }
+                }
+            }
+
+            if (wireframe)
 			{
 				var wirePoints = points.ToList().Select(x => { x.Flags |= VertexFlags.Wireframed; return x; });
 				builder.Append(wirePoints, indices, new[] { new BufferGroup(PipelineType.Wireframe, CameraType.Perspective, numSolidIndices, numWireframeIndices) });

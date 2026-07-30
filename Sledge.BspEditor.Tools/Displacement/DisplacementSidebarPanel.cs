@@ -30,6 +30,8 @@ namespace Sledge.BspEditor.Tools.Displacement
         private NumericUpDown _numRadius;
         private NumericUpDown _numAmount;
         private ComboBox _axisCombo;
+        private TextBox _txtTexture2;
+        private Button _btnBrowseTexture2;
 
         public DisplacementSidebarPanel()
         {
@@ -73,6 +75,44 @@ namespace Sledge.BspEditor.Tools.Displacement
             _axisCombo.SelectedIndex = 0;
             _axisCombo.SelectedIndexChanged += (s, e) => { if (_tool != null) _tool.PaintAxis = (DisplacementPaintAxis)_axisCombo.SelectedIndex; };
 
+            var lblTex2 = new Label { Text = "2nd Tex:", Top = 230, Left = 10, Width = 50 };
+            _txtTexture2 = new TextBox { Top = 230, Left = 60, Width = 90 };
+            _txtTexture2.TextChanged += (s, e) => {
+                if (_tool?.SelectedFace?.Displacement != null && _tool.SelectedSolid != null)
+                {
+                    var newTex = _txtTexture2.Text.Trim();
+                    if (_tool.SelectedFace.Displacement.Texture2Name != newTex)
+                    {
+                        _tool.SelectedFace.Displacement.Texture2Name = newTex;
+                        _tool.SelectedSolid.DescendantsChanged();
+
+                        var doc = _tool.GetDocument();
+                        if (doc != null)
+                        {
+                            Oy.Publish("MapDocument:Changed", new Change(doc).Update(_tool.SelectedSolid));
+                        }
+                    }
+                }
+            };
+            _btnBrowseTexture2 = new Button { Text = "...", Top = 230, Left = 155, Width = 25 };
+            _btnBrowseTexture2.Click += async (s, e) => {
+                var doc = _tool?.GetDocument();
+                if (doc != null)
+                {
+                    using (var tb = new Sledge.BspEditor.Tools.Texture.TextureBrowser(doc))
+                    {
+                        var t = Sledge.Common.Container.Get<Sledge.Common.Translations.ITranslationStringProvider>();
+                        await tb.Initialise(t);
+                        if (tb.ShowDialog() == DialogResult.OK && !string.IsNullOrEmpty(tb.SelectedTexture))
+                        {
+                            _txtTexture2.Text = tb.SelectedTexture;
+                        }
+                    }
+                }
+            };
+
+            Controls.Add(lblTex2); Controls.Add(_txtTexture2); Controls.Add(_btnBrowseTexture2);
+
             Controls.Add(lblPower); Controls.Add(_powerCombo);
             Controls.Add(_btnCreate); Controls.Add(_btnDestroy);
             Controls.Add(_chkPaint);
@@ -81,7 +121,7 @@ namespace Sledge.BspEditor.Tools.Displacement
             Controls.Add(lblAmount); Controls.Add(_numAmount);
             Controls.Add(lblAxis); Controls.Add(_axisCombo);
 
-            Height = 240;
+            Height = 270;
             UpdateState();
         }
 
@@ -108,6 +148,13 @@ namespace Sledge.BspEditor.Tools.Displacement
             _numRadius.Enabled = hasDisp;
             _numAmount.Enabled = hasDisp;
             _axisCombo.Enabled = hasDisp;
+
+            _txtTexture2.Enabled = hasDisp;
+            _btnBrowseTexture2.Enabled = hasDisp;
+            if (hasDisp && _tool.SelectedFace.Displacement != null)
+            {
+                _txtTexture2.Text = _tool.SelectedFace.Displacement.Texture2Name ?? "";
+            }
 
             if (!_chkPaint.Enabled)
             {
