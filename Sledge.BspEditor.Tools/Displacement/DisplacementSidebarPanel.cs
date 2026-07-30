@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Windows.Forms;
@@ -26,6 +27,8 @@ namespace Sledge.BspEditor.Tools.Displacement
         private ComboBox _modeCombo;
         private Button _btnCreate;
         private Button _btnDestroy;
+        private Button _btnSew;
+        private Button _btnInvertAlpha;
         private CheckBox _chkPaint;
         private NumericUpDown _numRadius;
         private NumericUpDown _numAmount;
@@ -46,13 +49,19 @@ namespace Sledge.BspEditor.Tools.Displacement
             _powerCombo.Items.AddRange(new object[] { "1", "2", "3", "4", "5" });
             _powerCombo.SelectedIndex = 1;
 
-            _btnCreate = new Button { Text = "Create", Top = 40, Left = 10, Width = 80 };
+            _btnCreate = new Button { Text = "Create", Top = 40, Left = 5, Width = 55 };
             _btnCreate.Click += BtnCreate_Click;
 
-            _btnDestroy = new Button { Text = "Destroy", Top = 40, Left = 100, Width = 80 };
+            _btnDestroy = new Button { Text = "Destroy", Top = 40, Left = 65, Width = 55 };
             _btnDestroy.Click += BtnDestroy_Click;
 
-            _chkPaint = new CheckBox { Text = "Paint Mode", Top = 80, Left = 10, Width = 120 };
+            _btnSew = new Button { Text = "Sew", Top = 40, Left = 125, Width = 45 };
+            _btnSew.Click += BtnSew_Click;
+
+            _btnInvertAlpha = new Button { Text = "Inv Alpha", Top = 40, Left = 175, Width = 95 };
+            _btnInvertAlpha.Click += BtnInvertAlpha_Click;
+
+            _chkPaint = new CheckBox { Text = "Paint Mode", Top = 80, Left = 10, Width = 115 };
             _chkPaint.CheckedChanged += (s, e) => { if (_tool != null) _tool.IsPainting = _chkPaint.Checked; };
 
             var lblMode = new Label { Text = "Mode:", Top = 110, Left = 10, Width = 50 };
@@ -77,23 +86,61 @@ namespace Sledge.BspEditor.Tools.Displacement
 
             var lblTex2 = new Label { Text = "2nd Tex:", Top = 230, Left = 10, Width = 50 };
             _txtTexture2 = new TextBox { Top = 230, Left = 60, Width = 90 };
+
             _txtTexture2.TextChanged += (s, e) => {
-                if (_tool?.SelectedFace?.Displacement != null && _tool.SelectedSolid != null)
+                if (_tool?.SelectedFaces.Count > 0)
                 {
                     var newTex = _txtTexture2.Text.Trim();
-                    if (_tool.SelectedFace.Displacement.Texture2Name != newTex)
-                    {
-                        _tool.SelectedFace.Displacement.Texture2Name = newTex;
-                        _tool.SelectedSolid.DescendantsChanged();
+                    var doc = _tool.GetDocument();
+                    if (doc == null) return;
 
-                        var doc = _tool.GetDocument();
-                        if (doc != null)
+                    bool anyChanged = false;
+                    foreach (var (solid, face) in _tool.SelectedFaces)
+                    {
+                        if (face.Displacement != null && face.Displacement.Texture2Name != newTex)
                         {
-                            Oy.Publish("MapDocument:Changed", new Change(doc).Update(_tool.SelectedSolid));
+                            anyChanged = true; break;
                         }
+                    }
+
+                    if (!anyChanged) return;
+
+                    var transaction = new Transaction();
+                    var newSelectedFaces = new List<(Primitives.MapObjects.Solid Solid, Face Face)>();
+
+                    foreach (var (solid, face) in _tool.SelectedFaces.ToList())
+                    {
+                        if (face.Displacement == null)
+                        {
+                            newSelectedFaces.Add((solid, face));
+                            continue;
+                        }
+
+                        if (!solid.Faces.Contains(face)) continue;
+
+                        if (face.Displacement.Texture2Name != newTex)
+                        {
+                            var clone = (Face)face.Clone();
+                            clone.Displacement.Texture2Name = newTex;
+
+                            transaction.Add(new RemoveMapObjectData(solid.ID, face));
+                            transaction.Add(new AddMapObjectData(solid.ID, clone));
+                            newSelectedFaces.Add((solid, clone));
+                        }
+                        else
+                        {
+                            newSelectedFaces.Add((solid, face));
+                        }
+                    }
+
+                    if (!transaction.IsEmpty)
+                    {
+                        MapDocumentOperation.Perform(doc, transaction);
+                        _tool.SelectedFaces = newSelectedFaces;
                     }
                 }
             };
+
             _btnBrowseTexture2 = new Button { Text = "...", Top = 230, Left = 155, Width = 25 };
             _btnBrowseTexture2.Click += async (s, e) => {
                 var doc = _tool?.GetDocument();
@@ -114,7 +161,7 @@ namespace Sledge.BspEditor.Tools.Displacement
             Controls.Add(lblTex2); Controls.Add(_txtTexture2); Controls.Add(_btnBrowseTexture2);
 
             Controls.Add(lblPower); Controls.Add(_powerCombo);
-            Controls.Add(_btnCreate); Controls.Add(_btnDestroy);
+            Controls.Add(_btnCreate); Controls.Add(_btnDestroy); Controls.Add(_btnSew); Controls.Add(_btnInvertAlpha);
             Controls.Add(_chkPaint);
             Controls.Add(lblMode); Controls.Add(_modeCombo);
             Controls.Add(lblRadius); Controls.Add(_numRadius);
@@ -138,11 +185,14 @@ namespace Sledge.BspEditor.Tools.Displacement
                 return;
             }
 
-            bool hasFace = _tool?.SelectedFace != null;
-            bool hasDisp = hasFace && _tool.SelectedFace.Displacement != null;
+            bool hasFace = _tool?.SelectedFaces.Count > 0;
+            bool hasDisp = hasFace && _tool.SelectedFaces.Any(x => x.Face.Displacement != null);
 
-            _btnCreate.Enabled = hasFace && !hasDisp && _tool.SelectedFace.Vertices.Count >= 4;
+            _btnCreate.Enabled = hasFace && _tool.SelectedFaces.Any(x => x.Face.Displacement == null && x.Face.Vertices.Count >= 4);
             _btnDestroy.Enabled = hasDisp;
+            _btnSew.Enabled = hasDisp && _tool.SelectedFaces.Count(x => x.Face.Displacement != null) > 1;
+            _btnInvertAlpha.Enabled = hasDisp;
+
             _chkPaint.Enabled = hasDisp;
             _modeCombo.Enabled = hasDisp;
             _numRadius.Enabled = hasDisp;
@@ -151,9 +201,13 @@ namespace Sledge.BspEditor.Tools.Displacement
 
             _txtTexture2.Enabled = hasDisp;
             _btnBrowseTexture2.Enabled = hasDisp;
-            if (hasDisp && _tool.SelectedFace.Displacement != null)
+            if (hasDisp)
             {
-                _txtTexture2.Text = _tool.SelectedFace.Displacement.Texture2Name ?? "";
+                var firstDispFace = _tool.SelectedFaces.FirstOrDefault(x => x.Face.Displacement != null).Face;
+                if (firstDispFace != null)
+                {
+                    _txtTexture2.Text = firstDispFace.Displacement.Texture2Name ?? "";
+                }
             }
 
             if (!_chkPaint.Enabled)
@@ -165,34 +219,94 @@ namespace Sledge.BspEditor.Tools.Displacement
 
         private void BtnCreate_Click(object sender, EventArgs e)
         {
-            if (_tool.SelectedFace == null || _tool.SelectedSolid == null)
+            if (_tool?.SelectedFaces.Count == 0)
                 return;
 
-            var clone = (Face)_tool.SelectedFace.Clone();
-            clone.Displacement = new Primitives.MapObjectData.Displacement(_powerCombo.SelectedIndex + 2, _tool.SelectedFace.Vertices.ToArray());
+            var doc = _tool.GetDocument();
+            if (doc == null) return;
 
-            MapDocumentOperation.Perform(_tool.GetDocument(), new Transaction(
-                new RemoveMapObjectData(_tool.SelectedSolid.ID, _tool.SelectedFace),
-                new AddMapObjectData(_tool.SelectedSolid.ID, clone)
-            ));
-            _tool.SelectedFace = clone;
+            var transaction = new Transaction();
+            var power = _powerCombo.SelectedIndex + 2;
+            var newSelectedFaces = new List<(Primitives.MapObjects.Solid Solid, Face Face)>();
+
+            foreach (var (solid, face) in _tool.SelectedFaces.ToList())
+            {
+                if (face.Displacement != null || face.Vertices.Count < 4)
+                {
+                    newSelectedFaces.Add((solid, face));
+                    continue;
+                }
+
+                if (!solid.Faces.Contains(face)) continue;
+
+                var clone = (Face)face.Clone();
+                clone.Displacement = new Primitives.MapObjectData.Displacement(power, face.Vertices.ToArray());
+
+                transaction.Add(new RemoveMapObjectData(solid.ID, face));
+                transaction.Add(new AddMapObjectData(solid.ID, clone));
+                newSelectedFaces.Add((solid, clone));
+            }
+
+            if (!transaction.IsEmpty)
+            {
+                MapDocumentOperation.Perform(doc, transaction);
+                _tool.SelectedFaces = newSelectedFaces;
+            }
             UpdateState();
         }
 
         private void BtnDestroy_Click(object sender, EventArgs e)
         {
-            if (_tool.SelectedFace == null || _tool.SelectedSolid == null)
+            if (_tool?.SelectedFaces.Count == 0)
                 return;
 
-            var clone = (Face)_tool.SelectedFace.Clone();
-            clone.Displacement = null;
+            var doc = _tool.GetDocument();
+            if (doc == null) return;
 
-            MapDocumentOperation.Perform(_tool.GetDocument(), new Transaction(
-                new RemoveMapObjectData(_tool.SelectedSolid.ID, _tool.SelectedFace),
-                new AddMapObjectData(_tool.SelectedSolid.ID, clone)
-            ));
-            _tool.SelectedFace = clone;
+            var transaction = new Transaction();
+            var newSelectedFaces = new List<(Primitives.MapObjects.Solid Solid, Face Face)>();
+
+            foreach (var (solid, face) in _tool.SelectedFaces.ToList())
+            {
+                if (face.Displacement == null)
+                {
+                    newSelectedFaces.Add((solid, face));
+                    continue;
+                }
+
+                if (!solid.Faces.Contains(face)) continue;
+
+                var clone = (Face)face.Clone();
+                clone.Displacement = null;
+
+                transaction.Add(new RemoveMapObjectData(solid.ID, face));
+                transaction.Add(new AddMapObjectData(solid.ID, clone));
+                newSelectedFaces.Add((solid, clone));
+            }
+
+            if (!transaction.IsEmpty)
+            {
+                MapDocumentOperation.Perform(doc, transaction);
+                _tool.SelectedFaces = newSelectedFaces;
+            }
             UpdateState();
+        }
+
+        private void BtnSew_Click(object sender, EventArgs e)
+        {
+            if (_tool != null)
+            {
+                _tool.SewSelectedDisplacements();
+                UpdateState();
+            }
+        }
+        private void BtnInvertAlpha_Click(object sender, EventArgs e)
+        {
+            if (_tool != null)
+            {
+                _tool.InvertSelectedDisplacementAlphas();
+                UpdateState();
+            }
         }
     }
 }
