@@ -335,8 +335,8 @@ namespace Sledge.Rendering.Engine
 
 			foreach (var pipeline in transparentPipelines)
 			{
-				if (pipeline.Type == PipelineType.BillboardAlpha || (IsShadowsEnabled && pipeline.Type == PipelineType.ShadowOverlay))
-					pipeline.Render(Context, renderTarget, _commandList, Scene.GetRenderables(pipeline, renderTarget));
+                if (pipeline.Type == PipelineType.BillboardAlpha || pipeline.Type == PipelineType.Wireframe || (IsShadowsEnabled && pipeline.Type == PipelineType.ShadowOverlay))
+                    pipeline.Render(Context, renderTarget, _commandList, Scene.GetRenderables(pipeline, renderTarget));
 			}
 
 			_commandList.End();

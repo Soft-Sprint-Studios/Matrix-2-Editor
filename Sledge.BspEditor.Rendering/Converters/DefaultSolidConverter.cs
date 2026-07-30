@@ -381,7 +381,7 @@ namespace Sledge.BspEditor.Rendering.Converters
 
                                 pass2Verts.Add(new VertexStandard
                                 {
-                                    Position = pos + (normal * 0.1f),
+                                    Position = pos,
                                     Colour = colour,
                                     Normal = normal,
                                     Texture = tex2,

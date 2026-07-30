@@ -12,8 +12,8 @@ namespace Sledge.Rendering.Pipelines
     public class WireframePipeline : IPipeline
     {
         public PipelineType Type => PipelineType.Wireframe;
-        public PipelineGroup Group => PipelineGroup.Opaque;
-        public float Order => 10;
+        public PipelineGroup Group => PipelineGroup.Transparent;
+        public float Order => 100;
 
         private Shader _vertex;
         private Shader _fragment;
