@@ -35,6 +35,9 @@ namespace Sledge.BspEditor.Tools.Displacement
         private ComboBox _axisCombo;
         private TextBox _txtTexture2;
         private Button _btnBrowseTexture2;
+        private NumericUpDown _numNoiseMin;
+        private NumericUpDown _numNoiseMax;
+        private Button _btnNoise;
 
         public DisplacementSidebarPanel()
         {
@@ -158,6 +161,19 @@ namespace Sledge.BspEditor.Tools.Displacement
                 }
             };
 
+            var lblNoiseMin = new Label { Text = "Noise Min:", Top = 260, Left = 10, Width = 60 };
+            _numNoiseMin = new NumericUpDown { Top = 260, Left = 70, Width = 50, Minimum = -1024, Maximum = 1024, Value = -10 };
+            var lblNoiseMax = new Label { Text = "Max:", Top = 260, Left = 125, Width = 30 };
+            _numNoiseMax = new NumericUpDown { Top = 260, Left = 155, Width = 50, Minimum = -1024, Maximum = 1024, Value = 10 };
+            _btnNoise = new Button { Text = "Noise", Top = 260, Left = 210, Width = 60 };
+            _btnNoise.Click += (s, e) => {
+                if (_tool != null) _tool.ApplyNoise((float)_numNoiseMin.Value, (float)_numNoiseMax.Value);
+            };
+
+            Controls.Add(lblNoiseMin); Controls.Add(_numNoiseMin);
+            Controls.Add(lblNoiseMax); Controls.Add(_numNoiseMax);
+            Controls.Add(_btnNoise);
+
             Controls.Add(lblTex2); Controls.Add(_txtTexture2); Controls.Add(_btnBrowseTexture2);
 
             Controls.Add(lblPower); Controls.Add(_powerCombo);
@@ -168,7 +184,7 @@ namespace Sledge.BspEditor.Tools.Displacement
             Controls.Add(lblAmount); Controls.Add(_numAmount);
             Controls.Add(lblAxis); Controls.Add(_axisCombo);
 
-            Height = 270;
+            Height = 300;
             UpdateState();
         }
 
@@ -201,6 +217,9 @@ namespace Sledge.BspEditor.Tools.Displacement
 
             _txtTexture2.Enabled = hasDisp;
             _btnBrowseTexture2.Enabled = hasDisp;
+            _numNoiseMin.Enabled = hasDisp;
+            _numNoiseMax.Enabled = hasDisp;
+            _btnNoise.Enabled = hasDisp;
             if (hasDisp)
             {
                 var firstDispFace = _tool.SelectedFaces.FirstOrDefault(x => x.Face.Displacement != null).Face;

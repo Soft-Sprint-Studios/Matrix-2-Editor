@@ -94,6 +94,7 @@ namespace Sledge.BspEditor.Tools.Displacement
         public bool IsPainting { get; set; } = false;
         public DisplacementPaintAxis PaintAxis { get; set; } = DisplacementPaintAxis.FaceNormal;
         public DisplacementSculptMode SculptMode { get; set; } = DisplacementSculptMode.RaiseLower;
+        private readonly Random _rand = new Random();
 
         protected override IEnumerable<Subscription> Subscribe()
         {
@@ -328,6 +329,54 @@ namespace Sledge.BspEditor.Tools.Displacement
             viewport.ReleaseInputLock(this);
         }
 
+        public void ApplyNoise(float min, float max)
+        {
+            var doc = GetDocument();
+            if (doc == null || SelectedFaces.Count == 0) return;
+
+            var transaction = new Transaction();
+            var newSelectedFaces = new List<(Solid Solid, Face Face)>();
+            bool changed = false;
+
+            foreach (var (solid, face) in SelectedFaces)
+            {
+                if (face.Displacement == null)
+                {
+                    newSelectedFaces.Add((solid, face));
+                    continue;
+                }
+
+                if (!solid.Faces.Contains(face)) continue;
+
+                var clone = (Face)face.Clone();
+                int power = clone.Displacement.Power;
+                int side = (1 << power) + 1;
+                int totalVerts = side * side;
+
+                for (int i = 0; i < totalVerts; i++)
+                {
+                    float noise = min + (float)_rand.NextDouble() * (max - min);
+                    clone.Displacement.Distances[i] += noise;
+                    if (clone.Displacement.Distances[i] < 0)
+                    {
+                        clone.Displacement.Distances[i] = -clone.Displacement.Distances[i];
+                        clone.Displacement.Vectors[i] = -clone.Displacement.Vectors[i];
+                    }
+                }
+                changed = true;
+
+                transaction.Add(new RemoveMapObjectData(solid.ID, face));
+                transaction.Add(new AddMapObjectData(solid.ID, clone));
+                newSelectedFaces.Add((solid, clone));
+            }
+
+            if (changed && !transaction.IsEmpty)
+            {
+                MapDocumentOperation.Perform(doc, transaction);
+                SelectedFaces = newSelectedFaces;
+                Oy.Publish("DisplacementTool:FaceSelected", this);
+            }
+        }
         private void PaintDisplacement(Face face, Vector3 hit, float amount)
         {
             int power = face.Displacement.Power;
