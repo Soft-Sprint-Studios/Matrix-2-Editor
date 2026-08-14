@@ -52,16 +52,16 @@ namespace Sledge.BspEditor.Tools.Displacement
             _powerCombo.Items.AddRange(new object[] { "1", "2", "3", "4", "5" });
             _powerCombo.SelectedIndex = 1;
 
-            _btnCreate = new Button { Text = "Create", Top = 40, Left = 5, Width = 55 };
+            _btnCreate = new Button { Text = "Create", Top = 40, Left = 5, Width = 55, Height = 25 };
             _btnCreate.Click += BtnCreate_Click;
 
-            _btnDestroy = new Button { Text = "Destroy", Top = 40, Left = 65, Width = 55 };
+            _btnDestroy = new Button { Text = "Destroy", Top = 40, Left = 65, Width = 65, Height = 25 };
             _btnDestroy.Click += BtnDestroy_Click;
 
-            _btnSew = new Button { Text = "Sew", Top = 40, Left = 125, Width = 45 };
+            _btnSew = new Button { Text = "Sew", Top = 40, Left = 135, Width = 45, Height = 25 };
             _btnSew.Click += BtnSew_Click;
 
-            _btnInvertAlpha = new Button { Text = "Inv Alpha", Top = 40, Left = 175, Width = 95 };
+            _btnInvertAlpha = new Button { Text = "Inv Alpha", Top = 40, Left = 185, Width = 95, Height = 25 };
             _btnInvertAlpha.Click += BtnInvertAlpha_Click;
 
             _chkPaint = new CheckBox { Text = "Paint Mode", Top = 80, Left = 10, Width = 115 };
