@@ -20,7 +20,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 		public Control Control => this;
 
 		private readonly IGameDataProvider _fgdProvider = Common.Container.Get<IGameDataProvider>("Fgd");
-		private readonly ITexturePackageProvider _wadProvider = Common.Container.Get<ITexturePackageProvider>("Wad3");
 
 		private Dictionary<string, bool> _initialObjectCollection = null;
 
@@ -68,26 +67,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			gridUpDown.ValueChanged += OnEnvironmentChanged;
 
 			nudDefaultTextureScale.ValueChanged += OnEnvironmentChanged;
-
-			//cklTexturePackages.ItemCheck += (s, e) => this.InvokeLater(() => OnEnvironmentChanged(s, e)); // So it happens after the checkstate has changed, not before
-			cklTexturePackages.ItemCheck += (s, e) =>
-			{
-				try
-				{
-					var element = cklTexturePackages.Items.OfType<string>().ElementAt(e.Index);//  .ElementAt(e.Index);
-					if (_initialObjectCollection.TryGetValue(element, out var oldVar))
-						_initialObjectCollection[element] = e.NewValue == CheckState.Checked;
-				}
-				catch (ArgumentOutOfRangeException ex)
-				{
-					Log.Error(this.Name, $"Element {e.Index} is out of range {_initialObjectCollection.Count}", ex);
-				}
-				catch (Exception ex)
-				{
-					Log.Error(this.Name, ex.Message, ex);
-				}
-				this.InvokeLater(() => OnEnvironmentChanged(s, e));
-			};
 		}
 
 		public void Translate(ITranslationStringProvider strings)
@@ -101,13 +80,13 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			grpTextures.Text = strings.GetString(prefix, "Textures");
 
 			btnBuildToolsBrowse.Text = btnGameDirBrowse.Text = strings.GetString(prefix, "Browse");
-			btnAddFgd.Text = btnAddTextures.Text = strings.GetString(prefix, "Add");
-			btnRemoveFgd.Text = btnRemoveTextures.Text = strings.GetString(prefix, "Remove");
+            btnAddFgd.Text = strings.GetString(prefix, "Add");
+            btnRemoveFgd.Text = strings.GetString(prefix, "Remove");
 
-			colFgdName.Text = colWadName.Text = strings.GetString(prefix, "Name");
-			colFgdPath.Text = colWadPath.Text = strings.GetString(prefix, "Path");
+            colFgdName.Text = strings.GetString(prefix, "Name");
+            colFgdPath.Text = strings.GetString(prefix, "Path");
 
-			lblGameDir.Text = strings.GetString(prefix, "GameDirectory");
+            lblGameDir.Text = strings.GetString(prefix, "GameDirectory");
 			lblBaseGame.Text = strings.GetString(prefix, "BaseDirectory");
 			lblGameMod.Text = strings.GetString(prefix, "ModDirectory");
 			lblGameExe.Text = strings.GetString(prefix, "GameExecutable");
@@ -129,10 +108,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			lblCopyToMapFolder.Text = strings.GetString(prefix, "CopyToMapFolder");
 
 			lblDefaultTextureScale.Text = strings.GetString(prefix, "DefaultTextureScale");
-			lblTexturePackageExclusions.Text = strings.GetString(prefix, "TexturePackagesToInclude");
-			chkToggleAllTextures.Text = strings.GetString(prefix, "ToggleAll");
-			lblAdditionalTexturePackages.Text = strings.GetString(prefix, "AdditionalTexturePackages");
-			//cordonDefaultTextureLabel.Text = strings.GetString(prefix, "CordonToolTextureText");
 
 		}
 
@@ -189,20 +164,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 			cordonTextureText.Text = env.CordonTexture;
 			nonRendTextBox.Text = env.NonRenderableTextures?.Aggregate("", (current, next) => current + (next + ";")).Trim();
-
-			cklTexturePackages.Items.Clear();
-			foreach (var exc in env.ExcludedWads)
-			{
-				cklTexturePackages.Items.Add(exc, false); // all wads not in this list will be excluded
-			}
-			UpdateTexturePackages();
-
-			lstAdditionalTextures.Items.Clear();
-			foreach (var fileName in env.AdditionalTextureFiles)
-			{
-				lstAdditionalTextures.Items.Add(new ListViewItem(new[] { Path.GetFileName(fileName), fileName }) { ToolTipText = fileName });
-			}
-			UpdateWadList();
 		}
 
 		public GoldsourceEnvironment GetEnvironment()
@@ -244,8 +205,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 				DefaultGridSize = (float)gridUpDown.Value,
 
 				DefaultTextureScale = nudDefaultTextureScale.Value,
-				ExcludedWads = _initialObjectCollection.Where(x => !x.Value).Select(x => x.Key).ToList(),
-				AdditionalTextureFiles = lstAdditionalTextures.Items.OfType<ListViewItem>().Select(x => x.SubItems[1].Text).Where(File.Exists).ToList(),
 
 				CordonTexture = cordonTextureText.Text,
 				NonRenderableTextures = nonRendTextBox.Text.Split(';').Select(texture => texture.Trim()).Where(texture => !string.IsNullOrEmpty(texture)).ToArray()
@@ -270,7 +229,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 		private void GameDirectoryTextChanged(object sender, EventArgs e)
 		{
 			UpdateGameDirectory();
-			UpdateTexturePackages();
 		}
 
 		private void UpdateGameDirectory()
@@ -458,177 +416,20 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			else if (cmbRadExe.Items.Count > 0) cmbRadExe.SelectedIndex = Math.Max(0, range.FindIndex(x => x.ToLower().Contains("rad")));
 		}
 
-		public Dictionary<string, bool> GetTexturePackageSelection()
-		{
-			//if (_initialObjectCollection != null && _initialObjectCollection.Count > 0) return _initialObjectCollection;
-			var d = new Dictionary<string, bool>(StringComparer.InvariantCultureIgnoreCase);
-
-			var packages = cklTexturePackages.Items.OfType<string>().ToList();
-			for (var i = 0; i < packages.Count; i++)
-			{
-				var name = packages[i];
-				var state = cklTexturePackages.GetItemCheckState(i);
-				if (state == CheckState.Indeterminate) continue;
-				d[name] = state == CheckState.Checked;
-			}
-
-			return d;
-		}
-
 		private void BaseGameDirectoryChanged(object sender, EventArgs e)
 		{
-			UpdateTexturePackages();
+			OnEnvironmentChanged(sender, e);
 		}
 
 		private void ModDirectoryChanged(object sender, EventArgs e)
 		{
-			UpdateTexturePackages();
+			OnEnvironmentChanged(sender, e);
 		}
 
 		private void IncludeBuildToolsChanged(object sender, EventArgs e)
 		{
-			UpdateTexturePackages();
+			OnEnvironmentChanged(sender, e);
 		}
-
-		private void UpdateTexturePackages()
-		{
-			var state = GetTexturePackageSelection();
-
-			var directories = new List<string>();
-			if (cmbBaseGame.SelectedItem is string sbg)
-			{
-				directories.AddRange(new[]
-				{
-					Path.Combine(txtGameDir.Text, sbg),
-					Path.Combine(txtGameDir.Text, sbg + "_hd"),
-					Path.Combine(txtGameDir.Text, sbg + "_downloads"),
-					Path.Combine(txtGameDir.Text, sbg + "_addon"),
-				});
-			}
-			if (cmbGameMod.SelectedItem is string sgm)
-			{
-				directories.AddRange(new[]
-				{
-					Path.Combine(txtGameDir.Text, sgm),
-					Path.Combine(txtGameDir.Text, sgm + "_hd"),
-					Path.Combine(txtGameDir.Text, sgm + "_downloads"),
-					Path.Combine(txtGameDir.Text, sgm + "_addon"),
-				});
-			}
-
-			if (chkIncludeToolsDirectory.Checked)
-			{
-				directories.Add(txtBuildToolsDirectory.Text);
-			}
-
-			directories = directories.Distinct().Where(Directory.Exists).ToList();
-
-			if (directories.Any())
-			{
-				try
-				{
-					var packages = _wadProvider.GetPackagesInFile(new CompositeFile(
-						new NativeFile(txtGameDir.Text),
-						directories.Select(x => new NativeFile(x))
-					)).ToList();
-
-					// Exclude game-internal packages that can not be used
-					string[] _internalWads = new[] { "cached.wad", "fonts.wad", "gfx.wad", "tempdecal.wad" };
-					foreach (var pr in packages)
-					{
-						if (!state.ContainsKey(pr.Name) && !_internalWads.Contains(pr.Name))
-							state[pr.Name] = true;
-					}
-
-					foreach (var key in state.Keys.ToList())
-					{
-						if (packages.All(x => !string.Equals(x.Name, key, StringComparison.InvariantCultureIgnoreCase))) state.Remove(key);
-					}
-				}
-				catch
-				{
-					//
-				}
-			}
-			cklTexturePackages.BeginUpdate();
-
-			_initialObjectCollection = new Dictionary<string, bool>();
-
-
-			cklTexturePackages.Items.Clear();
-			foreach (var kv in state.OrderBy(x => x.Value ? 0 : 1).ThenBy(x => x.Key, StringComparer.InvariantCultureIgnoreCase))
-			{
-				cklTexturePackages.Items.Add(kv.Key, kv.Value);
-				_initialObjectCollection.Add(kv.Key, kv.Value);
-			}
-
-			cklTexturePackages.EndUpdate();
-
-		}
-
-		private void ToggleAllTextures(object sender, EventArgs e)
-		{
-			var on = chkToggleAllTextures.Checked;
-			for (var i = 0; i < cklTexturePackages.Items.Count; i++)
-			{
-				cklTexturePackages.SetItemChecked(i, on);
-			}
-		}
-
-		public string WadFilesLabel { get; set; } = "WAD texture packages";
-
-		private void BrowseWad(object sender, EventArgs e)
-		{
-			using (var ofd = new OpenFileDialog { Filter = WadFilesLabel + @" (*.wad)|*.wad", Multiselect = true })
-			{
-				if (ofd.ShowDialog() != DialogResult.OK) return;
-
-				foreach (var fileName in ofd.FileNames)
-				{
-					lstAdditionalTextures.Items.Add(new ListViewItem(new[] { Path.GetFileName(fileName), fileName }) { ToolTipText = fileName });
-				}
-
-				UpdateWadList();
-				OnEnvironmentChanged(this, EventArgs.Empty);
-			}
-		}
-
-		private void RemoveWad(object sender, EventArgs e)
-		{
-			if (lstAdditionalTextures.SelectedItems.Count > 0)
-			{
-				foreach (var i in lstAdditionalTextures.SelectedItems.OfType<ListViewItem>().ToList())
-				{
-					lstAdditionalTextures.Items.Remove(i);
-				}
-				UpdateWadList();
-				OnEnvironmentChanged(this, EventArgs.Empty);
-			}
-		}
-
-		private void UpdateWadList()
-		{
-			lstAdditionalTextures.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
-		}
-
-		private void cklTexturePackages_KeyPress(object sender, KeyPressEventArgs e)
-		{
-			e.Handled = true;
-		}
-
-		private void FilterBox_TextChanged(object sender, EventArgs e)
-		{
-			var newCkList = _initialObjectCollection;
-			var filteredList = newCkList.Where(x => x.Key.Contains((sender as TextBox).Text)).ToList();
-
-			cklTexturePackages.Items.Clear();
-			foreach (var item in filteredList)
-			{
-				cklTexturePackages.Items.Add(item.Key, item.Value);
-			}
-			this.InvokeLater(() => OnEnvironmentChanged(sender, e));
-		}
-
 		private void cordonTextureText_TextChanged(object sender, EventArgs e)
 		{
 			OnEnvironmentChanged(sender, e);

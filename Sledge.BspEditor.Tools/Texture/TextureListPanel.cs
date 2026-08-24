@@ -598,16 +598,16 @@ namespace Sledge.BspEditor.Tools.Texture
 				}
 			}
 
-			private const int Padding = 3;
-			private static readonly Font Font = SystemFonts.MessageBoxFont;
-			private static readonly int FontHeight = SystemFonts.MessageBoxFont.Height;
+            private const int Padding = 4;
+            private const int TextAreaHeight = 32;
+            private static readonly Font Font = new Font(SystemFonts.MessageBoxFont.FontFamily, 7.5f, FontStyle.Regular);
 
-			private void SetSize(int imageWidth, int imageHeight)
-			{
-				Size = new Size(imageWidth + Padding * 2, imageHeight + Padding * 2 + FontHeight);
-			}
+            private void SetSize(int imageWidth, int imageHeight)
+            {
+                Size = new Size(imageWidth + Padding * 2, imageHeight + Padding * 2 + TextAreaHeight);
+            }
 
-			public TextureControl(string textureName, Func<string, int, int, Task<ICollection<Bitmap>>> getTextureBitmap, Action invalidated)
+            public TextureControl(string textureName, Func<string, int, int, Task<ICollection<Bitmap>>> getTextureBitmap, Action invalidated)
 			{
 				_getTextureBitmap = getTextureBitmap;
 				_invalidated = invalidated;
@@ -634,11 +634,15 @@ namespace Sledge.BspEditor.Tools.Texture
 					g.DrawRectangle(Pens.Gray, new Rectangle(x + 1, y + 1, Size.Width - 2, Size.Height - 2));
 				}
 
-				// Draw the texture name
-				g.DrawString(TextureName, Font, Brushes.White, x + 1, y + Size.Height - FontHeight - Padding);
+                // Draw the texture name inside the bottom text area with word wrap
+                var textRect = new RectangleF(x + Padding, y + Size.Height - TextAreaHeight, Size.Width - Padding * 2, TextAreaHeight);
+                using (var sf = new StringFormat { Trimming = StringTrimming.EllipsisPath, Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Near })
+                {
+                    g.DrawString(TextureName, Font, Brushes.White, textRect, sf);
+                }
 
-				// Draw the image (if it's loaded)
-				if (_bitmapTask != null && _bitmapTask.IsCompleted)
+                // Draw the image (if it's loaded)
+                if (_bitmapTask != null && _bitmapTask.IsCompleted)
 				{
 					var img = _bitmapTask?.Result?.FirstOrDefault();
 					if (img == null)
@@ -646,8 +650,8 @@ namespace Sledge.BspEditor.Tools.Texture
 						Log.Warning(nameof(TextureControl), $"Failed to load sprite {TextureName}");
 						return;
 					}
-					DrawImage(g, img, x + Padding, y + Padding, Size.Width - Padding * 2, Size.Height - Padding * 2 - FontHeight);
-				}
+                    DrawImage(g, img, x + Padding, y + Padding, Size.Width - Padding * 2, Size.Height - Padding * 2 - TextAreaHeight);
+                }
 			}
 
 			private void DrawImage(Graphics g, Image bmp, int x, int y, int w, int h)

@@ -71,8 +71,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 				DefaultTextureScale = GetVal(environment.Properties, "DefaultTextureScale", 1m),
 				DefaultGridSize = GetVal(environment.Properties, "DefaultGridSize", 16f),
-				ExcludedWads = GetVal(environment.Properties, "ExcludedWads", "").Split(';').Where(x => !String.IsNullOrWhiteSpace(x)).ToList(),
-				AdditionalTextureFiles = GetVal(environment.Properties, "AdditionalTextureFiles", "").Split(';').Where(x => !String.IsNullOrWhiteSpace(x)).ToList(),
 				CordonTexture = GetVal(environment.Properties, "CordonWrapTexture", "BLACK"),
 				NonRenderableTextures = GetVal(environment.Properties, "NonRenderableTexture", "aaatrigger;sky;null;clip;hint;skip;origin;bevel").Split(';').Select(texture => texture.Trim()).Where(texture => !String.IsNullOrEmpty(texture)).ToArray()
 
@@ -119,8 +117,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 				DefaultTextureScale = GetVal(environment.Properties, "DefaultTextureScale", 1m),
 				DefaultGridSize = GetVal(environment.Properties, "DefaultGridSize", 16f),
 
-				IncludedWads = GetVal(environment.Properties, "IncludedWads", "").Split(';').Where(x => !String.IsNullOrWhiteSpace(x)).ToList(),
-				AdditionalTextureFiles = GetVal(environment.Properties, "AdditionalTextureFiles", "").Split(';').Where(x => !String.IsNullOrWhiteSpace(x)).ToList(),
 				CordonTexture = GetVal(environment.Properties, "CordonWrapTexture", "BLACK"),
 				NonRenderableTextures = GetVal(environment.Properties, "NonRenderableTexture", "aaatrigger;sky;null;clip;hint;skip;origin;bevel").Split(';').Select(texture => texture.Trim()).Where(texture => !String.IsNullOrEmpty(texture)).ToArray()
 			};
@@ -171,8 +167,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 					{ "DefaultGridSize", Convert.ToString(env.DefaultGridSize, CultureInfo.InvariantCulture)},
 
-					{ "IncludedWads", String.Join(";", env.IncludedWads) },
-					{ "AdditionalTextureFiles", String.Join(";", env.AdditionalTextureFiles) },
 					{ "CordonWrapTexture", String.Join(";", env.CordonTexture) },
 					{ "NonRenderableTexture", String.Join(";", env.NonRenderableTextures) }
 				}
@@ -225,8 +219,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 					{ "DefaultTextureScale", Convert.ToString(env.DefaultTextureScale, CultureInfo.InvariantCulture) },
 					{ "DefaultGridSize", Convert.ToString(env.DefaultGridSize, CultureInfo.InvariantCulture)},
 
-					{ "ExcludedWads", String.Join(";", env.ExcludedWads) },
-					{ "AdditionalTextureFiles", String.Join(";", env.AdditionalTextureFiles) },
 					{ "CordonWrapTexture", String.Join(";", env.CordonTexture) },
 					{ "NonRenderableTexture", String.Join(";", env.NonRenderableTextures) }
 

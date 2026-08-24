@@ -13,7 +13,7 @@ Specification
 		Description "Run the compile in fast mode to get a quick lower-quality preview of your work"
         Arguments
         {
-	        CSG "-wadautodetect -low -estimate -noinfo"
+	        CSG "-low -estimate -noinfo"
 	        BSP "-low -estimate -noinfo"
 	        VIS "-fast -low -estimate -noinfo"
 	        RAD "-fast -low -estimate -noinfo"
@@ -131,14 +131,6 @@ Specification
 			Name "No Text Conversion"
 			Flag "-notextconvert"
 			Description "Don't convert game_text messages to UTF8 format"
-		}
-
-		Parameter
-		{
-			Name "Wad Autodetect"
-			Flag "-wadautodetect"
-			Description "Remove unused wad files from the map dependency list. You want to enable this."
-			Enabled "True"
 		}
 
 		Parameter

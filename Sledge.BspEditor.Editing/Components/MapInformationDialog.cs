@@ -154,10 +154,10 @@ namespace Sledge.BspEditor.Editing.Components
 				foreach (var ut in uniqueTextures)
 				{
 					var tex = await tc.GetTextureItem(ut);
-					// todo BETA: Other engines: the texture size operation will need to be outsourced to the provider to properly calculate usage for non-24-bit textures
-					if (tex != null)
-						texUsage += tex.Width * tex.Height * 3; // 3 bytes per pixel
-				}
+                    // todo BETA: Other engines: the texture size operation will need to be outsourced to the provider to properly calculate usage for non-24-bit textures
+                    if (tex != null)
+                        texUsage += tex.Width * tex.Height * 4;
+                }
 				var textureMemoryMb = texUsage / (1024m * 1024m);
 				this.InvokeLater(() =>
 				{

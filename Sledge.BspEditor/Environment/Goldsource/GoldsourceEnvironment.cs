@@ -27,8 +27,8 @@ namespace Sledge.BspEditor.Environment.Goldsource
 {
 	public class GoldsourceEnvironment : IEnvironment
 	{
-		private readonly ITexturePackageProvider _wadProvider;
-		private readonly ITexturePackageProvider _spriteProvider;
+        private readonly ITexturePackageProvider _pmfProvider;
+        private readonly ITexturePackageProvider _spriteProvider;
 		private readonly ITexturePackageProvider _envProvider;
 		private readonly IGameDataProvider _fgdProvider;
 		private readonly Lazy<Task<TextureCollection>> _textureCollection;
@@ -78,16 +78,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 		public string CordonTexture { get; set; }
 
 		public string[] NonRenderableTextures { get; set; }
-
-
-		public List<string> ExcludedWads { get; set; }
-		public List<string> IncludedWads
-		{
-			get => _wadProvider.GetPackagesInFile(Root).Where(x => !ExcludedWads.Contains(x.Name)).Select(x => x.Name).ToList();
-			set => ExcludedWads = _wadProvider.GetPackagesInFile(Root).Where(x => !value.Contains(x.Name)).Select(x => x.Name).ToList();
-		}
-
-		public List<string> AdditionalTextureFiles { get; set; }
 
 		private IFile _root;
 
@@ -155,8 +145,8 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 		public GoldsourceEnvironment()
 		{
-			_wadProvider = Container.Get<ITexturePackageProvider>("Wad3");
-			_spriteProvider = Container.Get<ITexturePackageProvider>("Spr");
+            _pmfProvider = Container.Get<ITexturePackageProvider>("Pmf");
+            _spriteProvider = Container.Get<ITexturePackageProvider>("Spr");
 			_fgdProvider = Container.Get<IGameDataProvider>("Fgd");
 			_envProvider = Container.Get<ITexturePackageProvider>("Env");
 
@@ -165,22 +155,19 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			_gameData = new Lazy<Task<GameData>>(MakeGameDataAsync);
 			_data = new List<IEnvironmentData>();
 			FgdFiles = new List<string>();
-			AdditionalTextureFiles = new List<string>();
-			ExcludedWads = new List<string>();
 			IncludeToolsDirectoryInEnvironment = IncludeToolsDirectoryInEnvironment = true;
 		}
 
 		private async Task<TextureCollection> MakeTextureCollectionAsync()
 		{
-			var wadRefs = _wadProvider.GetPackagesInFile(Root).Where(x => !ExcludedWads.Contains(x.Name, StringComparer.InvariantCultureIgnoreCase));
-			var extraWads = AdditionalTextureFiles.SelectMany(x => _wadProvider.GetPackagesInFile(new NativeFile(x)));
-			var wads = await _wadProvider.GetTexturePackages(wadRefs.Union(extraWads));
+            var pmfRefs = _pmfProvider?.GetPackagesInFile(Root) ?? Enumerable.Empty<TexturePackageReference>();
+            var pmfPackages = await (_pmfProvider?.GetTexturePackages(pmfRefs) ?? Task.FromResult(Enumerable.Empty<TexturePackage>()));
 
-			var spriteRefs = _spriteProvider.GetPackagesInFile(Root);
-			var sprites = await _spriteProvider.GetTexturePackages(spriteRefs);
+            var spriteRefs = _spriteProvider?.GetPackagesInFile(Root) ?? Enumerable.Empty<TexturePackageReference>();
+            var sprites = await (_spriteProvider?.GetTexturePackages(spriteRefs) ?? Task.FromResult(Enumerable.Empty<TexturePackage>()));
 
-			return new GoldsourceTextureCollection(wads.Union(sprites));
-		}
+            return new GoldsourceTextureCollection(pmfPackages.Union(sprites));
+        }
 		public IEnumerable<TexturePackageReference> GetSkyboxes() => _skyTextures;
 
 		private Task<GameData> MakeGameDataAsync()
@@ -226,32 +213,11 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			}
 
 			ed.Name = "worldspawn";
-
-			// Set the wad usage - this required when exporting to map for compile
-
-			var tc = await GetTextureCollection();
-
-			// Get the list of used packages - the packages are abstracted away from the file system, so we don't know where they are located yet
-			var usedPackages = GetUsedTexturePackages(document, tc).Select(x => x.Location).ToHashSet(StringComparer.InvariantCultureIgnoreCase);
-
-			// Get the list of wad locations - for the wad texture provider, this is a quick operation
-			var wads = _wadProvider.GetPackagesInFile(Root).Select(x => x.File.GetPathOnDisk()).Where(x => x != null).ToList();
-
-			// Get the list of wads that are in the used set
-			var usedWads = wads.Where(x => usedPackages.Contains(Path.GetFileName(x))).ToList();
-
-			document.Map.Root.Data.GetOne<EntityData>()?.Set("wad", string.Join(";", usedWads));
 		}
 
 		private IEnumerable<string> GetUsedTextures(MapDocument document)
 		{
 			return document.Map.Root.FindAll().SelectMany(x => x.Data.OfType<ITextured>()).Select(x => x.Texture.Name).Distinct();
-		}
-
-		private IEnumerable<TexturePackage> GetUsedTexturePackages(MapDocument document, TextureCollection collection)
-		{
-			var used = GetUsedTextures(document).ToList();
-			return collection.Packages.Where(x => used.Any(x.HasTexture));
 		}
 
 		public void AddData(IEnvironmentData data)

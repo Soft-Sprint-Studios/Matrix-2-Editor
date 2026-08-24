@@ -14,7 +14,7 @@ namespace Sledge.BspEditor.Environment.Goldsource
         public override IEnumerable<string> GetBrowsableTextures()
         {
             var hs = new HashSet<string>();
-            foreach (var pack in Packages.Where(x => x.Type == "Wad3")) hs.UnionWith(pack.Textures);
+            foreach (var pack in Packages.Where(x => x.Type == "Pmf")) hs.UnionWith(pack.Textures);
             return hs;
         }
 

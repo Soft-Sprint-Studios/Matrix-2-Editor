@@ -89,16 +89,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			label1 = new System.Windows.Forms.Label();
 			cordonTextureText = new System.Windows.Forms.TextBox();
 			cordonDefaultTextureLabel = new System.Windows.Forms.Label();
-			FilterBox = new System.Windows.Forms.TextBox();
-			lstAdditionalTextures = new System.Windows.Forms.ListView();
-			colWadName = new System.Windows.Forms.ColumnHeader();
-			colWadPath = new System.Windows.Forms.ColumnHeader();
-			btnRemoveTextures = new System.Windows.Forms.Button();
-			btnAddTextures = new System.Windows.Forms.Button();
-			lblAdditionalTexturePackages = new System.Windows.Forms.Label();
-			lblTexturePackageExclusions = new System.Windows.Forms.Label();
-			cklTexturePackages = new System.Windows.Forms.CheckedListBox();
-			chkToggleAllTextures = new System.Windows.Forms.CheckBox();
 			((System.ComponentModel.ISupportInitialize)nudDefaultTextureScale).BeginInit();
 			grpDirectories.SuspendLayout();
 			grpFgds.SuspendLayout();
@@ -739,29 +729,21 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			grpTextures.Controls.Add(label1);
 			grpTextures.Controls.Add(cordonTextureText);
 			grpTextures.Controls.Add(cordonDefaultTextureLabel);
-			grpTextures.Controls.Add(FilterBox);
-			grpTextures.Controls.Add(lstAdditionalTextures);
-			grpTextures.Controls.Add(btnRemoveTextures);
-			grpTextures.Controls.Add(btnAddTextures);
-			grpTextures.Controls.Add(lblAdditionalTexturePackages);
-			grpTextures.Controls.Add(lblTexturePackageExclusions);
-			grpTextures.Controls.Add(cklTexturePackages);
-			grpTextures.Controls.Add(chkToggleAllTextures);
 			grpTextures.Controls.Add(lblDefaultTextureScale);
 			grpTextures.Controls.Add(nudDefaultTextureScale);
 			grpTextures.Location = new System.Drawing.Point(7, 914);
 			grpTextures.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
 			grpTextures.Name = "grpTextures";
 			grpTextures.Padding = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			grpTextures.Size = new System.Drawing.Size(536, 535);
-			grpTextures.TabIndex = 49;
+            grpTextures.Size = new System.Drawing.Size(536, 175);
+            grpTextures.TabIndex = 49;
 			grpTextures.TabStop = false;
 			grpTextures.Text = "Textures";
-			// 
-			// nonRendTextBox
-			// 
-			nonRendTextBox.Location = new System.Drawing.Point(191, 499);
-			nonRendTextBox.Name = "nonRendTextBox";
+            // 
+            // nonRendTextBox
+            // 
+            nonRendTextBox.Location = new System.Drawing.Point(191, 90);
+            nonRendTextBox.Name = "nonRendTextBox";
 			nonRendTextBox.Size = new System.Drawing.Size(336, 23);
 			nonRendTextBox.TabIndex = 50;
 			nonRendTextBox.TextChanged += nonRendTextBox_TextChanged;
@@ -769,16 +751,16 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			// label1
 			// 
 			label1.AutoSize = true;
-			label1.Location = new System.Drawing.Point(14, 499);
-			label1.Name = "label1";
+            label1.Location = new System.Drawing.Point(14, 90);
+            label1.Name = "label1";
 			label1.Size = new System.Drawing.Size(139, 15);
 			label1.TabIndex = 49;
 			label1.Text = "Non-renderable textures:";
-			// 
-			// cordonTextureText
-			// 
-			cordonTextureText.Location = new System.Drawing.Point(191, 465);
-			cordonTextureText.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            // 
+            // cordonTextureText
+            // 
+            cordonTextureText.Location = new System.Drawing.Point(191, 55);
+            cordonTextureText.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
 			cordonTextureText.Name = "cordonTextureText";
 			cordonTextureText.Size = new System.Drawing.Size(116, 23);
 			cordonTextureText.TabIndex = 48;
@@ -787,112 +769,13 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			// cordonDefaultTextureLabel
 			// 
 			cordonDefaultTextureLabel.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			cordonDefaultTextureLabel.Location = new System.Drawing.Point(14, 465);
-			cordonDefaultTextureLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            cordonDefaultTextureLabel.Location = new System.Drawing.Point(14, 55);
+            cordonDefaultTextureLabel.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
 			cordonDefaultTextureLabel.Name = "cordonDefaultTextureLabel";
 			cordonDefaultTextureLabel.Size = new System.Drawing.Size(366, 23);
 			cordonDefaultTextureLabel.TabIndex = 47;
 			cordonDefaultTextureLabel.Text = "Cordon tool wrap texture:";
 			cordonDefaultTextureLabel.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
-			// FilterBox
-			// 
-			FilterBox.Location = new System.Drawing.Point(191, 43);
-			FilterBox.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			FilterBox.Name = "FilterBox";
-			FilterBox.Size = new System.Drawing.Size(116, 23);
-			FilterBox.TabIndex = 46;
-			FilterBox.TextChanged += FilterBox_TextChanged;
-			// 
-			// lstAdditionalTextures
-			// 
-			lstAdditionalTextures.Columns.AddRange(new System.Windows.Forms.ColumnHeader[] { colWadName, colWadPath });
-			lstAdditionalTextures.FullRowSelect = true;
-			lstAdditionalTextures.HeaderStyle = System.Windows.Forms.ColumnHeaderStyle.Nonclickable;
-			lstAdditionalTextures.Location = new System.Drawing.Point(10, 293);
-			lstAdditionalTextures.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			lstAdditionalTextures.Name = "lstAdditionalTextures";
-			lstAdditionalTextures.ShowItemToolTips = true;
-			lstAdditionalTextures.Size = new System.Drawing.Size(424, 169);
-			lstAdditionalTextures.TabIndex = 45;
-			lstAdditionalTextures.UseCompatibleStateImageBehavior = false;
-			lstAdditionalTextures.View = System.Windows.Forms.View.Details;
-			// 
-			// colWadName
-			// 
-			colWadName.Text = "Name";
-			// 
-			// colWadPath
-			// 
-			colWadPath.Text = "Path";
-			// 
-			// btnRemoveTextures
-			// 
-			btnRemoveTextures.Location = new System.Drawing.Point(442, 327);
-			btnRemoveTextures.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			btnRemoveTextures.Name = "btnRemoveTextures";
-			btnRemoveTextures.Size = new System.Drawing.Size(86, 27);
-			btnRemoveTextures.TabIndex = 44;
-			btnRemoveTextures.Text = "Remove";
-			btnRemoveTextures.UseVisualStyleBackColor = true;
-			btnRemoveTextures.Click += RemoveWad;
-			// 
-			// btnAddTextures
-			// 
-			btnAddTextures.Location = new System.Drawing.Point(442, 293);
-			btnAddTextures.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			btnAddTextures.Name = "btnAddTextures";
-			btnAddTextures.Size = new System.Drawing.Size(86, 27);
-			btnAddTextures.TabIndex = 43;
-			btnAddTextures.Text = "Add...";
-			btnAddTextures.UseVisualStyleBackColor = true;
-			btnAddTextures.Click += BrowseWad;
-			// 
-			// lblAdditionalTexturePackages
-			// 
-			lblAdditionalTexturePackages.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			lblAdditionalTexturePackages.Location = new System.Drawing.Point(7, 267);
-			lblAdditionalTexturePackages.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-			lblAdditionalTexturePackages.Name = "lblAdditionalTexturePackages";
-			lblAdditionalTexturePackages.Size = new System.Drawing.Size(416, 23);
-			lblAdditionalTexturePackages.TabIndex = 34;
-			lblAdditionalTexturePackages.Text = "Additional texture packages:";
-			lblAdditionalTexturePackages.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
-			// lblTexturePackageExclusions
-			// 
-			lblTexturePackageExclusions.ImageAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			lblTexturePackageExclusions.Location = new System.Drawing.Point(14, 42);
-			lblTexturePackageExclusions.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-			lblTexturePackageExclusions.Name = "lblTexturePackageExclusions";
-			lblTexturePackageExclusions.Size = new System.Drawing.Size(366, 23);
-			lblTexturePackageExclusions.TabIndex = 34;
-			lblTexturePackageExclusions.Text = "Texture packages to include:";
-			lblTexturePackageExclusions.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
-			// cklTexturePackages
-			// 
-			cklTexturePackages.CheckOnClick = true;
-			cklTexturePackages.FormattingEnabled = true;
-			cklTexturePackages.Location = new System.Drawing.Point(10, 68);
-			cklTexturePackages.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			cklTexturePackages.Name = "cklTexturePackages";
-			cklTexturePackages.Size = new System.Drawing.Size(517, 184);
-			cklTexturePackages.TabIndex = 39;
-			cklTexturePackages.KeyPress += cklTexturePackages_KeyPress;
-			// 
-			// chkToggleAllTextures
-			// 
-			chkToggleAllTextures.Checked = true;
-			chkToggleAllTextures.CheckState = System.Windows.Forms.CheckState.Checked;
-			chkToggleAllTextures.Location = new System.Drawing.Point(387, 47);
-			chkToggleAllTextures.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			chkToggleAllTextures.Name = "chkToggleAllTextures";
-			chkToggleAllTextures.Size = new System.Drawing.Size(141, 21);
-			chkToggleAllTextures.TabIndex = 42;
-			chkToggleAllTextures.Text = "Toggle all";
-			chkToggleAllTextures.UseVisualStyleBackColor = true;
-			chkToggleAllTextures.CheckedChanged += ToggleAllTextures;
 			// 
 			// GoldsourceEnvironmentEditor
 			// 
@@ -904,8 +787,8 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			Controls.Add(grpDirectories);
 			Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
 			Name = "GoldsourceEnvironmentEditor";
-			Size = new System.Drawing.Size(551, 1478);
-			((System.ComponentModel.ISupportInitialize)nudDefaultTextureScale).EndInit();
+            Size = new System.Drawing.Size(551, 1120);
+            ((System.ComponentModel.ISupportInitialize)nudDefaultTextureScale).EndInit();
 			grpDirectories.ResumeLayout(false);
 			grpDirectories.PerformLayout();
 			grpFgds.ResumeLayout(false);
@@ -963,8 +846,6 @@ namespace Sledge.BspEditor.Environment.Goldsource
         private System.Windows.Forms.Label lblBuildRAD;
         private System.Windows.Forms.Button btnBuildToolsBrowse;
         private System.Windows.Forms.GroupBox grpTextures;
-        private System.Windows.Forms.CheckedListBox cklTexturePackages;
-        private System.Windows.Forms.Label lblTexturePackageExclusions;
         private System.Windows.Forms.Label lblCopyToMapFolder;
         private System.Windows.Forms.CheckBox chkCopyBsp;
         private System.Windows.Forms.CheckBox chkCopyRes;
@@ -974,15 +855,7 @@ namespace Sledge.BspEditor.Environment.Goldsource
         private System.Windows.Forms.CheckBox chkMapCopyBsp;
         private System.Windows.Forms.CheckBox chkAskRunGame;
         private System.Windows.Forms.CheckBox chkRunGame;
-        private System.Windows.Forms.CheckBox chkToggleAllTextures;
-        private System.Windows.Forms.ListView lstAdditionalTextures;
-        private System.Windows.Forms.ColumnHeader colWadName;
-        private System.Windows.Forms.ColumnHeader colWadPath;
-        private System.Windows.Forms.Button btnRemoveTextures;
-        private System.Windows.Forms.Button btnAddTextures;
-        private System.Windows.Forms.Label lblAdditionalTexturePackages;
-		private System.Windows.Forms.TextBox FilterBox;
-		private System.Windows.Forms.Label DefaultGridSizeLabel;
+        private System.Windows.Forms.Label DefaultGridSizeLabel;
 		private GridUpDown gridUpDown;
 		private System.Windows.Forms.TextBox cordonTextureText;
 		private System.Windows.Forms.Label cordonDefaultTextureLabel;

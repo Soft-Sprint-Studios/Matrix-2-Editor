@@ -1,6 +1,5 @@
 ﻿using Sledge.Common.Logging;
 using Sledge.FileSystem;
-using Sledge.Providers.Texture.Wad;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
