@@ -20,7 +20,7 @@ namespace Sledge.Providers.Model.Mdl10
             {
                 var mdl = MdlFile.FromFile(file);
                 mdl.WriteFakePrecalculatedChromeCoordinates();
-                return new MdlModel(mdl);
+                return new MdlModel(mdl, file);
             });
         }
 

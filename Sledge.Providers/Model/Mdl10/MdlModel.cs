@@ -1,12 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using Sledge.DataStructures.Geometric;
+using Sledge.FileSystem;
 using Sledge.Providers.Model.Mdl10.Format;
+using Sledge.Providers.Texture.ImageDecoders;
+using Sledge.Providers.Texture.Pmf;
 using Sledge.Rendering.Engine;
 using Sledge.Rendering.Interfaces;
 using Sledge.Rendering.Pipelines;
@@ -19,238 +24,279 @@ using PixelFormat = System.Drawing.Imaging.PixelFormat;
 
 namespace Sledge.Providers.Model.Mdl10
 {
-	public class MdlModel : IModel
-	{
-		private const int TEXTURE_MARGIN = 2;
-		public MdlFile Model { get; }
-		public VertexFlags Flags { get; set; } = 0;
+    public class MdlModel : IModel
+    {
+        public MdlFile Model { get; }
+        public VertexFlags Flags { get; set; } = 0;
 
-		private readonly Guid _guid;
-		private uint[][] _bodyPartIndices;
+        private readonly IFile _modelFile;
+        private readonly Guid _guid;
+        private uint[][] _bodyPartIndices;
 
-		private Rendering.Resources.Texture _textureResource;
-		private List<Rectangle> _originalRectangles;
-		private Buffer _buffer;
-		private uint _numTexturedIndices;
-		private uint _numWireframeIndices;
-		private uint[][] _skins;
+        private Rendering.Resources.Texture _textureResource;
+        private List<Rectangle> _originalRectangles;
+        private Buffer _buffer;
+        private uint _numTexturedIndices;
+        private uint _numWireframeIndices;
+        private uint[][] _skins;
 
-		private string TextureName => $"{nameof(MdlModel)}::{_guid}";
+        private string TextureName => $"{nameof(MdlModel)}::{_guid}";
 
-		public MdlModel(MdlFile model)
-		{
-			Model = model;
-			_guid = Guid.NewGuid();
-		}
+        public MdlModel(MdlFile model, IFile file = null)
+        {
+            Model = model;
+            _modelFile = file;
+            _guid = Guid.NewGuid();
+        }
 
-		public List<string> GetSequences()
-		{
-			return Model.Sequences.Select(x => x.Header.Name).ToList();
-		}
+        public List<string> GetSequences()
+        {
+            return Model.Sequences.Select(x => x.Header.Name).ToList();
+        }
 
-		public (Vector3, Vector3) GetBoundingBox(int sequence, int frame, float subframe)
-		{
-			var transforms = new Matrix4x4[Model.Bones.Count];
-			Model.GetTransforms(sequence, frame, subframe, ref transforms);
+        public (Vector3, Vector3) GetBoundingBox(int sequence, int frame, float subframe)
+        {
+            var transforms = new Matrix4x4[Model.Bones.Count];
+            Model.GetTransforms(sequence, frame, subframe, ref transforms);
 
-			var list =
-				from part in Model.BodyParts
-				from mesh in part.Models[0].Meshes
-				from vertex in mesh.Vertices
-				let transform = transforms[vertex.VertexBone]
-				select Vector3.Transform(vertex.Vertex, transform);
+            var list =
+                from part in Model.BodyParts
+                from mesh in part.Models[0].Meshes
+                from vertex in mesh.Vertices
+                let transform = transforms[vertex.VertexBone]
+                select Vector3.Transform(vertex.Vertex, transform);
 
-			var box = new Box(list);
-			return (box.Start, box.End);
-		}
+            var box = new Box(list);
+            return (box.Start, box.End);
+        }
 
-		private static Bitmap CreateBitmap(int width, int height, byte[] data, byte[] palette, bool lastTextureIsTransparent)
-		{
-			var bmp = new Bitmap(width, height, PixelFormat.Format8bppIndexed);
+        private static Bitmap CreateBitmap(int width, int height, byte[] data, byte[] palette, bool lastTextureIsTransparent)
+        {
+            var bmp = new Bitmap(width, height, PixelFormat.Format8bppIndexed);
 
-			// Set palette
-			var pal = bmp.Palette;
-			for (var j = 0; j <= byte.MaxValue; j++)
-			{
-				var k = j * 3;
-				pal.Entries[j] = Color.FromArgb(255, palette[k], palette[k + 1], palette[k + 2]);
-			}
+            var pal = bmp.Palette;
+            for (var j = 0; j <= byte.MaxValue; j++)
+            {
+                var k = j * 3;
+                pal.Entries[j] = Color.FromArgb(255, palette[k], palette[k + 1], palette[k + 2]);
+            }
 
-			if (lastTextureIsTransparent)
-			{
-				pal.Entries[pal.Entries.Length - 1] = Color.Transparent;
-			}
-			bmp.Palette = pal;
+            if (lastTextureIsTransparent)
+            {
+                pal.Entries[pal.Entries.Length - 1] = Color.Transparent;
+            }
+            bmp.Palette = pal;
 
-			// Write entries
-			var bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, bmp.PixelFormat);
-			Marshal.Copy(data, 0, bmpData.Scan0, data.Length);
-			bmp.UnlockBits(bmpData);
+            var bmpData = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.WriteOnly, bmp.PixelFormat);
+            Marshal.Copy(data, 0, bmpData.Scan0, data.Length);
+            bmp.UnlockBits(bmpData);
 
-			return bmp;
-		}
-		private List<Rectangle> CreateTexuture(EngineInterface engine, RenderContext context)
-		{
-			if (!Model.Textures.Any()) return new List<Rectangle>();
-			// Combine all the textures into one long texture
-			var textures = Model.Textures.Select(x => CreateBitmap(x.Header.Width, x.Header.Height, x.Data, x.Palette, x.Header.Flags.HasFlag(TextureFlags.Masked))).ToList();
+            return bmp;
+        }
 
-			var width = textures.Max(x => x.Width);
-			var height = textures.Max(x => x.Height);
+        private List<Rectangle> CreateTexuture(EngineInterface engine, RenderContext context)
+        {
+            if (!Model.Textures.Any()) return new List<Rectangle>();
 
-			var rectangles = new List<Rectangle>();
-			_originalRectangles = new List<Rectangle>(textures.Count);
+            IFile root = _modelFile;
+            while (root?.Parent != null) root = root.Parent;
 
-			var data = new byte[textures.Count][];
-			var i = 0;
-			foreach (var bitmap in textures)
-			{
-				var bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
-				using (var g = Graphics.FromImage(bmp))
-				{
-					g.DrawImage(bitmap, new Rectangle(0, 0, width, height));
+            var modelName = _modelFile?.NameWithoutExtension ?? Model.Header.Name ?? "";
+            if (modelName.EndsWith(".mdl", StringComparison.OrdinalIgnoreCase))
+                modelName = modelName.Substring(0, modelName.Length - 4);
 
-					_originalRectangles.Add(new Rectangle(0, 0, bitmap.Width, bitmap.Height));
-					var lb = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
-					data[i] = new byte[lb.Stride * lb.Height];
-					Marshal.Copy(lb.Scan0, data[i], 0, data[i].Length);
-					bmp.UnlockBits(lb);
-				}
+            var textures = new List<Bitmap>();
+            foreach (var x in Model.Textures)
+            {
+                Bitmap bmp = null;
+                if (root != null)
+                {
+                    var texName = x.Header.Name ?? "";
+                    if (texName.EndsWith(".bmp", StringComparison.OrdinalIgnoreCase))
+                        texName = texName.Substring(0, texName.Length - 4);
 
-				i++;
-				bmp.Dispose();
-			}
+                    var imgFile = PmfHelper.ResolveImageFile(root, $"models/{modelName}/{texName}")
+                               ?? PmfHelper.ResolveImageFile(root, $"models/{modelName}/{modelName}")
+                               ?? PmfHelper.ResolveImageFile(root, $"models/{texName}/{texName}");
 
-			rectangles = _originalRectangles;
+                    if (imgFile != null && imgFile.Exists && !imgFile.IsContainer)
+                    {
+                        try
+                        {
+                            using var stream = imgFile.Open();
+                            if (string.Equals(imgFile.Extension, "dds", StringComparison.OrdinalIgnoreCase))
+                                bmp = DdsDecoder.Decode(stream);
+                            else if (string.Equals(imgFile.Extension, "tga", StringComparison.OrdinalIgnoreCase))
+                                bmp = TgaDecoder.Decode(stream);
+                            else
+                                bmp = new Bitmap(stream);
+                        }
+                        catch { }
+                    }
+                }
 
-			_textureResource = engine.UploadTexture(TextureName, width, height, data, TextureSampleType.Standard, (uint)textures.Count);
+                if (bmp == null)
+                {
+                    bmp = CreateBitmap(x.Header.Width, x.Header.Height, x.Data, x.Palette, x.Header.Flags.HasFlag(TextureFlags.Masked));
+                }
 
-			return rectangles;
-		}
-		public void CreateResources(EngineInterface engine, RenderContext context)
-		{
-			_originalRectangles = CreateTexuture(engine, context);
-			_buffer = engine.CreateBuffer();
-			Init();
-		}
-		private void Init()
-		{
-			_skins = Model.Skins.Select(x => x.Textures.Select(x => (uint)x).ToArray()).ToArray();
+                textures.Add(bmp);
+            }
 
-			var texHeight = _originalRectangles.Max(x => x.Bottom);
-			var texWidth = _originalRectangles.Max(x => x.Right);
-			var maxTexSize = new Vector2(texWidth, texHeight);
-			var vertices = new List<VertexModel3>();
-			var indices = new List<uint>();
+            var width = textures.Max(x => x.Width);
+            var height = textures.Max(x => x.Height);
 
-			var wireframeIndices = new List<uint>();
+            _originalRectangles = new List<Rectangle>(textures.Count);
 
+            var data = new byte[textures.Count][];
+            var i = 0;
+            foreach (var bitmap in textures)
+            {
+                var bmp = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+                using (var g = Graphics.FromImage(bmp))
+                {
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    g.DrawImage(bitmap, new Rectangle(0, 0, width, height), 0, 0, bitmap.Width, bitmap.Height, GraphicsUnit.Pixel);
 
-			var _bodyPartIndices1 = new uint[Model.BodyParts.Count][];
+                    _originalRectangles.Add(new Rectangle(0, 0, bitmap.Width, bitmap.Height));
+                    var lb = bmp.LockBits(new Rectangle(0, 0, width, height), ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);
+                    data[i] = new byte[lb.Stride * lb.Height];
+                    Marshal.Copy(lb.Scan0, data[i], 0, data[i].Length);
+                    bmp.UnlockBits(lb);
+                }
 
-			uint vi = 0;
-			var skinMax = 0;
+                i++;
+                bmp.Dispose();
+                bitmap.Dispose();
+            }
 
-			var skin = Model.Skins[skinMax].Textures;
-			for (var bpi = 0; bpi < Model.BodyParts.Count; bpi++)
-			{
-				var part = Model.BodyParts[bpi];
-				_bodyPartIndices1[bpi] = new uint[part.Models.Length];
+            _textureResource = engine.UploadTexture(TextureName, width, height, data, TextureSampleType.Standard, (uint)textures.Count);
 
-				for (var mdlIndex = 0; mdlIndex < part.Models.Length; mdlIndex++)
-				{
-					var model = part.Models[mdlIndex];
-					_bodyPartIndices1[bpi][mdlIndex] = (uint)model.Meshes.Sum(x => x.Vertices.Length);
-					foreach (var mesh in model.Meshes)
-					{
-						var texId = skin[mesh.Header.SkinRef];
-						for (var i = 0; i < mesh.Vertices.Length; i++)
-						{
-							var x = mesh.Vertices[i];
-							x.Texture = new Vector2(float.IsNaN(x.Texture.X) ? x.Vertex.X : x.Texture.X, float.IsNaN(x.Texture.Y) ? x.Vertex.Z : x.Texture.Y);
-							var origRect = _originalRectangles.Count > texId ? _originalRectangles[texId] : Rectangle.Empty;
+            return _originalRectangles;
+        }
 
-							var coeff = maxTexSize / new Vector2(origRect.Width, origRect.Height);
-							var texturePosition = new Vector2((x.Texture.X / maxTexSize.X) * coeff.X, (x.Texture.Y / maxTexSize.Y) * coeff.Y);
-							vertices.Add(new VertexModel3
-							{
-								Position = x.Vertex,
-								Normal = x.Normal,
-								Texture = texturePosition,
-								TextureLayer = (uint)mesh.Header.SkinRef,
-								Bone = (uint)x.VertexBone,
-								Flags = Flags // Always 0 during ctor
-							});
-							indices.Add(vi);
-							wireframeIndices.Add(vi);
-							wireframeIndices.Add(i % 3 == 2 ? vi - 2 : vi + 1);
-							vi++;
-						}
-					}
-				}
+        public void CreateResources(EngineInterface engine, RenderContext context)
+        {
+            _originalRectangles = CreateTexuture(engine, context);
+            _buffer = engine.CreateBuffer();
+            Init();
+        }
 
-			}
-			_bodyPartIndices = _bodyPartIndices1;
+        private void Init()
+        {
+            _skins = Model.Skins.Select(x => x.Textures.Select(x => (uint)x).ToArray()).ToArray();
 
-			var flatIndices = new uint[vi + wireframeIndices.Count];
-			var currentIndexCount = 0;
-			Array.Copy(indices.ToArray(), 0, flatIndices, 0, indices.Count);
-			currentIndexCount = indices.Count;
-			Array.Copy(wireframeIndices.ToArray(), 0, flatIndices, currentIndexCount, wireframeIndices.Count);
+            var vertices = new List<VertexModel3>();
+            var indices = new List<uint>();
+            var wireframeIndices = new List<uint>();
 
-			_buffer.Update(vertices, flatIndices);
+            var _bodyPartIndices1 = new uint[Model.BodyParts.Count][];
 
-			_numTexturedIndices = (uint)(flatIndices.Length - wireframeIndices.Count);
-			_numWireframeIndices = (uint)wireframeIndices.Count;
-		}
+            uint vi = 0;
+            var skinMax = 0;
+            var skin = Model.Skins[skinMax].Textures;
 
-		public void Render(RenderContext context, IPipeline pipeline, IViewport viewport, CommandList cl, int skinId, int bodyGroup)
-		{
-			_buffer.Bind(cl, 0);
+            for (var bpi = 0; bpi < Model.BodyParts.Count; bpi++)
+            {
+                var part = Model.BodyParts[bpi];
+                _bodyPartIndices1[bpi] = new uint[part.Models.Length];
 
-			if (pipeline.Type == PipelineType.TexturedModel)
-			{
-				_textureResource.BindTo(cl, 1);
-				uint ci = 0;
+                for (var mdlIndex = 0; mdlIndex < part.Models.Length; mdlIndex++)
+                {
+                    var model = part.Models[mdlIndex];
+                    _bodyPartIndices1[bpi][mdlIndex] = (uint)model.Meshes.Sum(x => x.Vertices.Length);
+                    foreach (var mesh in model.Meshes)
+                    {
+                        var texId = mesh.Header.SkinRef < skin.Length ? skin[mesh.Header.SkinRef] : 0;
+                        var rawMdlTexWidth = (float)(texId < Model.Textures.Count ? Model.Textures[texId].Header.Width : 1);
+                        var rawMdlTexHeight = (float)(texId < Model.Textures.Count ? Model.Textures[texId].Header.Height : 1);
 
-				var bodyPartId = bodyGroup;
+                        if (rawMdlTexWidth <= 0) rawMdlTexWidth = 1;
+                        if (rawMdlTexHeight <= 0) rawMdlTexHeight = 1;
 
-				foreach (var bpi in _bodyPartIndices)
-				{
-					var body = bodyPartId % bpi.Length;
-					bodyPartId /= bpi.Length;
-					for (var model_index = 0; model_index < bpi.Length; model_index++)
-					{
-						var model = bpi[model_index];
+                        for (var i = 0; i < mesh.Vertices.Length; i++)
+                        {
+                            var x = mesh.Vertices[i];
 
-						if (model_index == body)
-							cl.DrawIndexed(model, 1, ci, 0, 0);
-						ci += model;
-					}
-				}
-			}
-			else if (pipeline.Type == PipelineType.WireframeModel)
-			{
-				cl.DrawIndexed(_numWireframeIndices, 1, _numTexturedIndices, 0, 0);
-			}
-		}
+                            var u = x.Texture.X / rawMdlTexWidth;
+                            var v = x.Texture.Y / rawMdlTexHeight;
 
-		public void DestroyResources()
-		{
-			_buffer?.Dispose();
-			_textureResource?.Dispose();
-		}
+                            vertices.Add(new VertexModel3
+                            {
+                                Position = x.Vertex,
+                                Normal = x.Normal,
+                                Texture = new Vector2(u, v),
+                                TextureLayer = (uint)mesh.Header.SkinRef,
+                                Bone = (uint)x.VertexBone,
+                                Flags = Flags
+                            });
+                            indices.Add(vi);
+                            wireframeIndices.Add(vi);
+                            wireframeIndices.Add(i % 3 == 2 ? vi - 2 : vi + 1);
+                            vi++;
+                        }
+                    }
+                }
+            }
+            _bodyPartIndices = _bodyPartIndices1;
 
-		public void Dispose()
-		{
-			//
-		}
+            var flatIndices = new uint[vi + wireframeIndices.Count];
+            Array.Copy(indices.ToArray(), 0, flatIndices, 0, indices.Count);
+            Array.Copy(wireframeIndices.ToArray(), 0, flatIndices, indices.Count, wireframeIndices.Count);
 
-		internal uint[] GetLayerSet(int skinId)
-		{
-			var skin = skinId % Model.Skins.Count;
+            _buffer.Update(vertices, flatIndices);
 
-			return _skins[skin];
-		}
-	}
+            _numTexturedIndices = (uint)(flatIndices.Length - wireframeIndices.Count);
+            _numWireframeIndices = (uint)wireframeIndices.Count;
+        }
+
+        public void Render(RenderContext context, IPipeline pipeline, IViewport viewport, CommandList cl, int skinId, int bodyGroup)
+        {
+            _buffer.Bind(cl, 0);
+
+            if (pipeline.Type == PipelineType.TexturedModel)
+            {
+                _textureResource.BindTo(cl, 1);
+                uint ci = 0;
+
+                var bodyPartId = bodyGroup;
+
+                foreach (var bpi in _bodyPartIndices)
+                {
+                    var body = bodyPartId % bpi.Length;
+                    bodyPartId /= bpi.Length;
+                    for (var model_index = 0; model_index < bpi.Length; model_index++)
+                    {
+                        var model = bpi[model_index];
+
+                        if (model_index == body)
+                            cl.DrawIndexed(model, 1, ci, 0, 0);
+                        ci += model;
+                    }
+                }
+            }
+            else if (pipeline.Type == PipelineType.WireframeModel)
+            {
+                cl.DrawIndexed(_numWireframeIndices, 1, _numTexturedIndices, 0, 0);
+            }
+        }
+
+        public void DestroyResources()
+        {
+            _buffer?.Dispose();
+            _textureResource?.Dispose();
+        }
+
+        public void Dispose()
+        {
+            //
+        }
+
+        internal uint[] GetLayerSet(int skinId)
+        {
+            var skin = skinId % Model.Skins.Count;
+            return _skins[skin];
+        }
+    }
 }
