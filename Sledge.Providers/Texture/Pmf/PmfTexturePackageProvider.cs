@@ -48,7 +48,8 @@ namespace Sledge.Providers.Texture.Pmf
            var specialTextures = new[]
            {
                 "aaatrigger", "trigger", "null", "sky", "clip",
-                "hint", "skip", "origin", "solidhint", "boundingbox", "bevel"
+                "hint", "skip", "origin", "solidhint", "boundingbox", "bevel", "water",
+                "monitor", "parallax", "video", "glass"
             };
             foreach (var st in specialTextures)
             {
@@ -181,7 +182,9 @@ namespace Sledge.Providers.Texture.Pmf
             return lower == "null" || lower.StartsWith("sky") || lower == "clip" ||
                    lower == "hint" || lower == "skip" || lower == "origin" ||
                    lower == "aaatrigger" || lower == "trigger" || lower == "solidhint" ||
-                   lower == "boundingbox" || lower == "bevel";
+                   lower == "boundingbox" || lower == "bevel" || lower.StartsWith("water") ||
+                   lower.StartsWith("monitor") || lower.StartsWith("parallax") ||
+                   lower.StartsWith("video") || lower.StartsWith("glass");
         }
 
         public static Bitmap GenerateToolBitmap(string name, int width, int height)
@@ -227,6 +230,27 @@ namespace Sledge.Providers.Texture.Pmf
             else if (lower == "bevel")
             {
                 bgColor = Color.FromArgb(140, 70, 180); // Purple bevel
+            }
+            else if (lower.StartsWith("water"))
+            {
+                bgColor = Color.FromArgb(30, 100, 180); // Translucent blue water
+            }
+            else if (lower.StartsWith("monitor"))
+            {
+                bgColor = Color.FromArgb(20, 180, 20); // Monitor green
+            }
+            else if (lower.StartsWith("parallax"))
+            {
+                bgColor = Color.FromArgb(150, 50, 150); // Parallax magenta
+            }
+            else if (lower.StartsWith("video"))
+            {
+                bgColor = Color.FromArgb(200, 100, 50); // Video orange-brown
+            }
+            else if (lower.StartsWith("glass"))
+            {
+                bgColor = Color.FromArgb(160, 200, 220); // Glass light cyan
+                textColor = Color.DarkBlue;
             }
             else // boundingbox and others
             {
