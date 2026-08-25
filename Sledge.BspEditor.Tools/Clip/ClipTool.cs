@@ -10,14 +10,15 @@ using Sledge.BspEditor.Documents;
 using Sledge.BspEditor.Modification;
 using Sledge.BspEditor.Modification.Operations.Tree;
 using Sledge.BspEditor.Primitives;
+using Sledge.BspEditor.Primitives.MapData;
 using Sledge.BspEditor.Primitives.MapObjects;
 using Sledge.BspEditor.Rendering.Resources;
 using Sledge.BspEditor.Rendering.Viewport;
 using Sledge.BspEditor.Tools.Properties;
 using Sledge.Common.Shell.Components;
 using Sledge.Common.Shell.Hotkeys;
-using Sledge.Rendering.Cameras;
 using Sledge.DataStructures.Geometric;
+using Sledge.Rendering.Cameras;
 using Sledge.Rendering.Overlay;
 using Sledge.Rendering.Pipelines;
 using Sledge.Rendering.Primitives;
@@ -58,6 +59,20 @@ namespace Sledge.BspEditor.Tools.Clip
         private ClipState _state;
         private ClipSide _side;
 
+        // ------------------------------------------------------------------
+        // 3D clipping state
+        // ------------------------------------------------------------------
+        private const int PerspPickWidth = 7;
+
+        /// <summary>True while point 3 was generated automatically from the clicked face normal.</summary>
+        private bool _autoThirdPoint;
+        /// <summary>Surface normal of the first face clicked in 3D, used for the automatic third point.</summary>
+        private Vector3 _firstHitNormal = Vector3.UnitZ;
+
+        private bool _dragging3D;
+        private int _draggingIndex3D = -1;
+        private Plane _dragPlane3D;
+
         public ClipTool()
         {
             Usage = ToolUsage.Both;
@@ -80,6 +95,21 @@ namespace Sledge.BspEditor.Tools.Clip
         {
             yield return Oy.Subscribe<ClipTool>("Tool:Activated", t => CycleClipSide());
             yield return Oy.Subscribe<string>("ClipTool:SetClipSide", v => SetClipSide(v));
+            yield return Oy.Subscribe<RightClickMenuBuilder>("MapViewport:RightClick", b =>
+            {
+                // Right-click commits the clip once the plane is defined
+                if (_state == ClipState.Drawn
+                    && _clipPlanePoint1.HasValue && _clipPlanePoint2.HasValue && _clipPlanePoint3.HasValue)
+                {
+                    b.Intercepted = true;
+                    var doc = GetDocument();
+                    if (doc != null)
+                    {
+                        PerformClip(doc);
+                        ResetPoints();
+                    }
+                }
+            });
         }
 
         private void SetClipSide(string visiblePoints)
@@ -89,13 +119,34 @@ namespace Sledge.BspEditor.Tools.Clip
                 _side = s;
             }
         }
-        
+
         private void CycleClipSide()
         {
-            var side = (int) _side;
-            side = (side + 1) % Enum.GetValues(typeof (ClipSide)).Length;
-            _side = (ClipSide) side;
+            var side = (int)_side;
+            side = (side + 1) % Enum.GetValues(typeof(ClipSide)).Length;
+            _side = (ClipSide)side;
         }
+
+        private void ResetPoints()
+        {
+            _clipPlanePoint1 = _clipPlanePoint2 = _clipPlanePoint3 = _drawingPoint = null;
+            _state = _prevState = ClipState.None;
+            _autoThirdPoint = false;
+            _dragging3D = false;
+            _draggingIndex3D = -1;
+        }
+
+        private static ClipState StateForIndex(int index)
+        {
+            switch (index)
+            {
+                case 0: return ClipState.MovingPoint1;
+                case 1: return ClipState.MovingPoint2;
+                default: return ClipState.MovingPoint3;
+            }
+        }
+
+        #region 2D interaction
 
         private ClipState GetStateAtPoint(int x, int y, OrthographicCamera camera)
         {
@@ -125,6 +176,7 @@ namespace Sledge.BspEditor.Tools.Clip
             {
                 _state = ClipState.Drawing;
                 _drawingPoint = point;
+                _autoThirdPoint = false;
             }
             else if (_state == ClipState.Drawn)
             {
@@ -149,6 +201,7 @@ namespace Sledge.BspEditor.Tools.Clip
                 _clipPlanePoint1 = _drawingPoint;
                 _clipPlanePoint2 = point;
                 _clipPlanePoint3 = _clipPlanePoint1 + SnapIfNeeded(camera.GetUnusedCoordinate(new Vector3(128, 128, 128)));
+                _autoThirdPoint = false;
             }
             else if (_state == ClipState.MovingPoint1)
             {
@@ -185,6 +238,7 @@ namespace Sledge.BspEditor.Tools.Clip
                     _clipPlanePoint2 -= diff;
                 }
                 _clipPlanePoint3 = cp3;
+                _autoThirdPoint = false;
             }
 
             if (st != ClipState.None || _state != ClipState.None && _state != ClipState.Drawn)
@@ -196,6 +250,238 @@ namespace Sledge.BspEditor.Tools.Clip
                 viewport.Control.Cursor = Cursors.Default;
             }
         }
+
+        #endregion
+
+        #region 3D interaction
+
+        private static Vector3? IntersectHorizontalPlane(Line ray, float z)
+        {
+            var dir = ray.End - ray.Start;
+            if (Math.Abs(dir.Z) < 0.000001f) return null;
+            var t = (z - ray.Start.Z) / dir.Z;
+            if (t < 0) return null;
+            return ray.Start + dir * t;
+        }
+
+        /// <summary>
+        /// Screen-space pick of the clip handles in a perspective view.
+        /// Returns the index of the closest handle within tolerance, or -1.
+        /// </summary>
+        private int GetPointNearScreen(PerspectiveCamera camera, MapViewport viewport, int x, int y)
+        {
+            var points = new[] { _clipPlanePoint1, _clipPlanePoint2, _clipPlanePoint3 };
+            var best = -1;
+            var bestDist = float.MaxValue;
+
+            for (var i = 0; i < points.Length; i++)
+            {
+                if (!points[i].HasValue) continue;
+                var sp = camera.WorldToScreen(points[i].Value);
+                if (sp.Z > 1) continue;
+
+                var dx = Math.Abs(sp.X - x);
+                var dy = Math.Abs(sp.Y - y);
+                if (dx > PerspPickWidth || dy > PerspPickWidth) continue;
+
+                var dist = dx + dy;
+                if (dist < bestDist)
+                {
+                    bestDist = dist;
+                    best = i;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// Find the face plane of the hit object that contains the given point (within tolerance).
+        /// </summary>
+        private static Plane GetFaceNormalAt(IMapObject obj, Vector3 point)
+        {
+            var solid = obj as Solid;
+            if (solid == null) return null;
+
+            Plane best = null;
+            var bestDist = float.MaxValue;
+            foreach (var f in solid.Faces)
+            {
+                var dist = Math.Abs(f.Plane.EvalAtPoint(point));
+                if (dist < bestDist && dist < 1f)
+                {
+                    bestDist = dist;
+                    best = f.Plane;
+                }
+            }
+            return best;
+        }
+
+        /// <summary>Set the next free point, managing the automatic third point.</summary>
+        private void PlaceNextPoint(Vector3 point, Vector3 normal)
+        {
+            if (!_clipPlanePoint1.HasValue)
+            {
+                _clipPlanePoint1 = point;
+                _firstHitNormal = normal;
+                _state = ClipState.Drawing;
+                return;
+            }
+
+            if (!_clipPlanePoint2.HasValue)
+            {
+                _clipPlanePoint2 = point;
+
+                // Automatic third point: push out along the first clicked face normal
+                _clipPlanePoint3 = _clipPlanePoint1.Value + normal * 128;
+                _autoThirdPoint = true;
+                _state = ClipState.Drawn;
+                return;
+            }
+
+            if (_autoThirdPoint)
+            {
+                // Third click replaces the automatic point with a manual one
+                _clipPlanePoint3 = point;
+                _autoThirdPoint = false;
+                _state = ClipState.Drawn;
+                return;
+            }
+
+            // All three points are manual: start a brand new clip here
+            _clipPlanePoint1 = point;
+            _clipPlanePoint2 = _clipPlanePoint3 = null;
+            _state = ClipState.Drawing;
+        }
+
+        protected override void MouseDown(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
+        {
+            if (e.Button != MouseButtons.Left) return;
+            if (!viewport.IsUnlocked(this)) return;
+
+            // Grab an existing handle to drag it
+            var idx = GetPointNearScreen(camera, viewport, e.X, e.Y);
+            if (idx >= 0 && _state == ClipState.Drawn)
+            {
+                _dragging3D = true;
+                _draggingIndex3D = idx;
+                _prevState = _state;
+                _state = StateForIndex(idx);
+
+                var p = PointByIndex(idx);
+                _dragPlane3D = new Plane(camera.Direction.Normalise(), p);
+
+                viewport.AquireInputLock(this);
+                e.Handled = true;
+                return;
+            }
+
+            // Otherwise place the next clip point
+            var (rayStart, rayEnd) = camera.CastRayFromScreen(new Vector3(e.X, e.Y, 0));
+            var ray = new Line(rayStart, rayEnd);
+
+            var tf = document.Map.Data.GetOne<DisplayFlags>() ?? new DisplayFlags();
+            var iopt = (tf.HideClipTextures ? MapObjectExtensions.IgnoreOptions.IgnoreClip : MapObjectExtensions.IgnoreOptions.None)
+                     | (tf.HideNullTextures ? MapObjectExtensions.IgnoreOptions.IgnoreNull : MapObjectExtensions.IgnoreOptions.None);
+
+            var hit = document.Map.Root.GetIntersectionsForVisibleObjects(ray, iopt).FirstOrDefault();
+
+            Vector3 point;
+            var normal = Vector3.UnitZ;
+            if (hit != null)
+            {
+                point = hit.Intersection;
+                var facePlane = GetFaceNormalAt(hit.Object, point);
+                if (facePlane != null) normal = facePlane.Normal;
+            }
+            else
+            {
+                point = IntersectHorizontalPlane(ray, 0f) ?? (ray.Start + (ray.End - ray.Start) * 512);
+                normal = Vector3.UnitZ;
+            }
+
+            point = SnapIfNeeded(point);
+
+            // Starting a fresh stroke clears any previous clip
+            if (_clipPlanePoint1.HasValue && !_autoThirdPoint && _clipPlanePoint3.HasValue)
+            {
+                _clipPlanePoint1 = _clipPlanePoint2 = _clipPlanePoint3 = null;
+            }
+
+            PlaceNextPoint(point, normal);
+            e.Handled = true;
+        }
+
+        private Vector3 PointByIndex(int index)
+        {
+            switch (index)
+            {
+                case 0: return _clipPlanePoint1 ?? Vector3.Zero;
+                case 1: return _clipPlanePoint2 ?? Vector3.Zero;
+                default: return _clipPlanePoint3 ?? Vector3.Zero;
+            }
+        }
+
+        private void SetPointByIndex(int index, Vector3 value)
+        {
+            switch (index)
+            {
+                case 0: _clipPlanePoint1 = value; break;
+                case 1: _clipPlanePoint2 = value; break;
+                default: _clipPlanePoint3 = value; break;
+            }
+        }
+
+        protected override void MouseMove(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
+        {
+            if (_dragging3D)
+            {
+                var (rs, re) = camera.CastRayFromScreen(new Vector3(e.X, e.Y, 0));
+                var ray = new Line(rs, re);
+
+                var isect = _dragPlane3D.GetIntersectionPoint(ray, ignoreDirection: true);
+                if (isect.HasValue)
+                {
+                    var np = KeyboardState.Alt ? isect.Value : SnapIfNeeded(isect.Value);
+                    var old = PointByIndex(_draggingIndex3D);
+
+                    // Ctrl moves all three points together, matching the 2D behaviour
+                    if (KeyboardState.Ctrl)
+                    {
+                        var diff = old - np;
+                        for (var i = 0; i < 3; i++)
+                        {
+                            if (i == _draggingIndex3D) continue;
+                            var p = PointByIndex(i);
+                            if (_clipPlanePoint3.HasValue || i < 2) SetPointByIndex(i, p - diff);
+                        }
+                    }
+
+                    SetPointByIndex(_draggingIndex3D, np);
+                    if (_draggingIndex3D == 2) _autoThirdPoint = false;
+                }
+                e.Handled = true;
+                return;
+            }
+
+            // Hover feedback
+            var hover = GetPointNearScreen(camera, viewport, e.X, e.Y);
+            viewport.Control.Cursor = hover >= 0 ? Cursors.SizeAll : Cursors.Default;
+        }
+
+        protected override void MouseUp(MapDocument document, MapViewport viewport, PerspectiveCamera camera, ViewportEvent e)
+        {
+            if (_dragging3D)
+            {
+                _dragging3D = false;
+                _draggingIndex3D = -1;
+                _state = ClipState.Drawn;
+                _prevState = ClipState.Drawn;
+                viewport.ReleaseInputLock(this);
+                e.Handled = true;
+            }
+        }
+
+        #endregion
 
         protected override void KeyDown(MapDocument document, MapViewport viewport, OrthographicCamera camera, ViewportEvent e)
         {
@@ -222,8 +508,7 @@ namespace Sledge.BspEditor.Tools.Clip
             }
             if (e.KeyCode == Keys.Escape || e.KeyCode == Keys.Enter) // Escape cancels, Enter commits and resets
             {
-                _clipPlanePoint1 = _clipPlanePoint2 = _clipPlanePoint3 = _drawingPoint = null;
-                _state = _prevState = ClipState.None;
+                ResetPoints();
             }
         }
 
@@ -239,16 +524,16 @@ namespace Sledge.BspEditor.Tools.Clip
             {
                 solid.Split(document.Map.NumberGenerator, plane, out var backSolid, out var frontSolid);
                 found = true;
-                
+
                 // Remove the clipped solid
                 clip.Add(new Detatch(solid.Hierarchy.Parent.ID, solid));
-                
+
                 if (_side != ClipSide.Back && frontSolid != null)
                 {
                     // Add front solid
                     clip.Add(new Attach(solid.Hierarchy.Parent.ID, frontSolid));
                 }
-                
+
                 if (_side != ClipSide.Front && backSolid != null)
                 {
                     // Add back solid
@@ -273,14 +558,14 @@ namespace Sledge.BspEditor.Tools.Clip
                 var p3 = _clipPlanePoint3.Value;
 
                 builder.Append(
-                    new []
+                    new[]
                     {
                         new VertexStandard { Position = p1, Colour = Vector4.One, Tint = Vector4.One },
                         new VertexStandard { Position = p2, Colour = Vector4.One, Tint = Vector4.One },
                         new VertexStandard { Position = p3, Colour = Vector4.One, Tint = Vector4.One },
                     },
-                    new uint [] { 0, 1, 1, 2, 2, 0 },
-                    new []
+                    new uint[] { 0, 1, 1, 2, 2, 0 },
+                    new[]
                     {
                         new BufferGroup(PipelineType.Wireframe, CameraType.Both, 0, 6)
                     }
@@ -320,12 +605,12 @@ namespace Sledge.BspEditor.Tools.Clip
                     }
 
                     builder.Append(
-                        verts, indices.Select(x => (uint) x),
-                        new[] { new BufferGroup(PipelineType.Wireframe, CameraType.Both, 0, (uint) indices.Count) }
+                        verts, indices.Select(x => (uint)x),
+                        new[] { new BufferGroup(PipelineType.Wireframe, CameraType.Both, 0, (uint)indices.Count) }
                     );
 
                     // Draw the clipping plane
-                    
+
                     var poly = new DataStructures.Geometric.Precision.Polygon(pp);
                     var bbox = document.Selection.GetSelectionBoundingBox();
                     var point = bbox.Center;
@@ -381,15 +666,33 @@ namespace Sledge.BspEditor.Tools.Clip
                 var p1 = _clipPlanePoint1.Value;
                 var p2 = _clipPlanePoint2.Value;
                 var p3 = _clipPlanePoint3.Value;
-                var points = new[] {p1, p2, p3};
+                var points = new[] { p1, p2, p3 };
 
                 foreach (var p in points)
                 {
                     const int size = 4;
                     var spos = camera.WorldToScreen(p);
-                    
+
                     im.AddRectOutlineOpaque(new Vector2(spos.X - size, spos.Y - size), new Vector2(spos.X + size, spos.Y + size), Color.Black, Color.White);
                 }
+            }
+        }
+
+        protected override void Render(MapDocument document, IViewport viewport, PerspectiveCamera camera, I2DRenderer im)
+        {
+            base.Render(document, viewport, camera, im);
+
+            if (_state == ClipState.None || _clipPlanePoint1 == null || _clipPlanePoint2 == null || _clipPlanePoint3 == null) return;
+
+            // Draw the handles in 3D so they can be seen and grabbed
+            var points = new[] { _clipPlanePoint1.Value, _clipPlanePoint2.Value, _clipPlanePoint3.Value };
+            foreach (var p in points)
+            {
+                const int size = 5;
+                var spos = camera.WorldToScreen(p);
+                if (spos.Z > 1) continue;
+
+                im.AddRectOutlineOpaque(new Vector2(spos.X - size, spos.Y - size), new Vector2(spos.X + size, spos.Y + size), Color.Black, Color.White);
             }
         }
     }
