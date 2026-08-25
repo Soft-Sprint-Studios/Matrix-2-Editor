@@ -88,26 +88,29 @@ namespace Sledge.BspEditor.Editing.Components.Properties.SmartEdit
         private void OpenModelBrowser(object sender, EventArgs e)
         {
             if (!_root.TryGetTarget(out var rt)) return;
-            var path = rt;
-            var basePath = _textBox.Text;
+            var basePath = _textBox.Text?.Trim().Replace('\\', '/');
+            IFile path = rt;
+
             switch (Property.VariableType)
             {
                 case VariableType.Sound:
-                    path = rt.TraversePath("sound");
+                    path = rt.TraversePath("sound") ?? rt;
                     break;
                 case VariableType.Sprite:
-                    path = rt.TraversePath("sprites");
+                    path = rt.TraversePath("sprites") ?? rt;
                     break;
                 case VariableType.Studio:
-                    path = rt.TraversePath("models");
+                    path = rt.TraversePath("models") ?? rt;
                     break;
             }
-            if (!String.IsNullOrEmpty(basePath))
-            {
-                var file = path.TraversePath(basePath);
 
-                var directory = Path.GetDirectoryName(file?.FullPathName);
-                path = rt.TraversePath(directory);
+            if (!string.IsNullOrEmpty(basePath))
+            {
+                var file = rt.TraversePath(basePath) ?? path.TraversePath(basePath);
+                if (file != null)
+                {
+                    path = file.IsContainer ? file : (file.Parent ?? path);
+                }
             }
 
             if (Property.VariableType == VariableType.Studio)
