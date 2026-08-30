@@ -213,6 +213,4 @@
   "Prefab.PrefabSidebarPanel.CreateLibButton": "创建库",
   "Prefab.PrefabSidebarPanel.NewPrefabPlaceholder": "新预设名称",
   "Prefab.PrefabSidebarPanel.NewLibPlaceholder": "新库名称",
-  "PropExporter.PropExporterCommand.Name": "创建 MDL 道具",
-  "PropExporter.PropExporterCommand.Description": "从选定内容创建道具"
 }

@@ -43,8 +43,8 @@ namespace Sledge.BspEditor.Editing.Components.Compile
 				{
 					AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
 					DataPropertyName = "Flag",
-					ReadOnly = true
-				};
+                    ReadOnly = false
+                };
 				dataTable.Columns.Add(flagColumn);
 
 				var checkboxColumn = new DataGridViewCheckBoxColumn
@@ -60,8 +60,8 @@ namespace Sledge.BspEditor.Editing.Components.Compile
 					AutoSizeMode = DataGridViewAutoSizeColumnMode.AllCells,
 					Width = 5,
 					DataPropertyName = "Name",
-					ReadOnly = true
-				};
+                    ReadOnly = false
+                };
 				dataTable.Columns.Add(nameColumn);
 
 				var valueColumn = new DataGridViewTextBoxColumn
@@ -70,7 +70,9 @@ namespace Sledge.BspEditor.Editing.Components.Compile
 					DataPropertyName = "Value"
 				};
 				dataTable.Columns.Add(valueColumn);
-			}
+                this.dataTable.AllowUserToAddRows = true;
+                this.dataTable.AllowUserToDeleteRows = true;
+            }
 			else
 			{
 				var flagColumn = new DataGridViewTextBoxColumn

@@ -54,12 +54,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 				ToolsDirectory = GetVal(environment.Properties, "ToolsDirectory", ""),
 				IncludeToolsDirectoryInEnvironment = GetVal(environment.Properties, "IncludeToolsDirectoryInEnvironment", true),
-				BspExe = GetVal(environment.Properties, "BspExe", ""),
-				CsgExe = GetVal(environment.Properties, "CsgExe", ""),
-				VisExe = GetVal(environment.Properties, "VisExe", ""),
-				RadExe = GetVal(environment.Properties, "RadExe", ""),
+                CompilerExe = GetVal(environment.Properties, "CompilerExe", ""),
 
-				GameCopyBsp = GetVal(environment.Properties, "GameCopyBsp", true),
+                GameCopyBsp = GetVal(environment.Properties, "GameCopyBsp", true),
 				GameRun = GetVal(environment.Properties, "GameRun", true),
 				GameAsk = GetVal(environment.Properties, "GameAsk", true),
 
@@ -99,12 +96,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 				ToolsDirectory = GetVal(environment.Properties, "ToolsDirectory", ""),
 				IncludeToolsDirectoryInEnvironment = GetVal(environment.Properties, "IncludeToolsDirectoryInEnvironment", true),
-				BspExe = GetVal(environment.Properties, "BspExe", ""),
-				CsgExe = GetVal(environment.Properties, "CsgExe", ""),
-				VisExe = GetVal(environment.Properties, "VisExe", ""),
-				RadExe = GetVal(environment.Properties, "RadExe", ""),
+                CompilerExe = GetVal(environment.Properties, "CompilerExe", ""),
 
-				GameCopyBsp = GetVal(environment.Properties, "GameCopyBsp", true),
+                GameCopyBsp = GetVal(environment.Properties, "GameCopyBsp", true),
 				GameRun = GetVal(environment.Properties, "GameRun", true),
 				GameAsk = GetVal(environment.Properties, "GameAsk", true),
 
@@ -148,12 +142,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 					{ "ToolsDirectory", env.ToolsDirectory },
 					{ "IncludeToolsDirectoryInEnvironment", Convert.ToString(env.IncludeToolsDirectoryInEnvironment, CultureInfo.InvariantCulture) },
-					{ "BspExe", env.BspExe },
-					{ "CsgExe", env.CsgExe },
-					{ "VisExe", env.VisExe },
-					{ "RadExe", env.RadExe },
+                    { "CompilerExe", env.CompilerExe },
 
-					{ "GameCopyBsp", Convert.ToString(env.GameCopyBsp, CultureInfo.InvariantCulture) },
+                    { "GameCopyBsp", Convert.ToString(env.GameCopyBsp, CultureInfo.InvariantCulture) },
 					{ "GameRun", Convert.ToString(env.GameRun, CultureInfo.InvariantCulture) },
 					{ "GameAsk", Convert.ToString(env.GameAsk, CultureInfo.InvariantCulture) },
 
@@ -201,12 +192,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 					{ "ToolsDirectory", env.ToolsDirectory },
 					{ "IncludeToolsDirectoryInEnvironment", Convert.ToString(env.IncludeToolsDirectoryInEnvironment, CultureInfo.InvariantCulture) },
-					{ "BspExe", env.BspExe },
-					{ "CsgExe", env.CsgExe },
-					{ "VisExe", env.VisExe },
-					{ "RadExe", env.RadExe },
+					{ "CompilerExe", env.CompilerExe },
 
-					{ "GameCopyBsp", Convert.ToString(env.GameCopyBsp, CultureInfo.InvariantCulture) },
+                    { "GameCopyBsp", Convert.ToString(env.GameCopyBsp, CultureInfo.InvariantCulture) },
 					{ "GameRun", Convert.ToString(env.GameRun, CultureInfo.InvariantCulture) },
 					{ "GameAsk", Convert.ToString(env.GameAsk, CultureInfo.InvariantCulture) },
 

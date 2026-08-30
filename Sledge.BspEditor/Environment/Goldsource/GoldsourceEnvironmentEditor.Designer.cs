@@ -74,16 +74,10 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			chkRunGame = new System.Windows.Forms.CheckBox();
 			chkIncludeToolsDirectory = new System.Windows.Forms.CheckBox();
 			lblBuildExeFolder = new System.Windows.Forms.Label();
-			lblBuildBSP = new System.Windows.Forms.Label();
-			txtBuildToolsDirectory = new System.Windows.Forms.TextBox();
-			lblBuildCSG = new System.Windows.Forms.Label();
-			cmbRadExe = new System.Windows.Forms.ComboBox();
-			cmbBspExe = new System.Windows.Forms.ComboBox();
-			lblBuildVIS = new System.Windows.Forms.Label();
-			cmbVisExe = new System.Windows.Forms.ComboBox();
-			cmbCsgExe = new System.Windows.Forms.ComboBox();
-			lblBuildRAD = new System.Windows.Forms.Label();
-			btnBuildToolsBrowse = new System.Windows.Forms.Button();
+            lblBuildCompiler = new System.Windows.Forms.Label();
+            txtBuildToolsDirectory = new System.Windows.Forms.TextBox();
+            cmbCompilerExe = new System.Windows.Forms.ComboBox();
+            btnBuildToolsBrowse = new System.Windows.Forms.Button();
 			grpTextures = new System.Windows.Forms.GroupBox();
 			nonRendTextBox = new System.Windows.Forms.TextBox();
 			label1 = new System.Windows.Forms.Label();
@@ -473,16 +467,10 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			grpBuildTools.Controls.Add(chkRunGame);
 			grpBuildTools.Controls.Add(chkIncludeToolsDirectory);
 			grpBuildTools.Controls.Add(lblBuildExeFolder);
-			grpBuildTools.Controls.Add(lblBuildBSP);
-			grpBuildTools.Controls.Add(txtBuildToolsDirectory);
-			grpBuildTools.Controls.Add(lblBuildCSG);
-			grpBuildTools.Controls.Add(cmbRadExe);
-			grpBuildTools.Controls.Add(cmbBspExe);
-			grpBuildTools.Controls.Add(lblBuildVIS);
-			grpBuildTools.Controls.Add(cmbVisExe);
-			grpBuildTools.Controls.Add(cmbCsgExe);
-			grpBuildTools.Controls.Add(lblBuildRAD);
-			grpBuildTools.Controls.Add(btnBuildToolsBrowse);
+            grpBuildTools.Controls.Add(lblBuildCompiler);
+            grpBuildTools.Controls.Add(txtBuildToolsDirectory);
+            grpBuildTools.Controls.Add(cmbCompilerExe);
+            grpBuildTools.Controls.Add(btnBuildToolsBrowse);
 			grpBuildTools.Location = new System.Drawing.Point(7, 553);
 			grpBuildTools.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
 			grpBuildTools.Name = "grpBuildTools";
@@ -621,100 +609,40 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			lblBuildExeFolder.TabIndex = 27;
 			lblBuildExeFolder.Text = "Folder containing build executables:";
 			lblBuildExeFolder.TextAlign = System.Drawing.ContentAlignment.MiddleLeft;
-			// 
-			// lblBuildBSP
-			// 
-			lblBuildBSP.Location = new System.Drawing.Point(41, 105);
-			lblBuildBSP.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-			lblBuildBSP.Name = "lblBuildBSP";
-			lblBuildBSP.Size = new System.Drawing.Size(40, 23);
-			lblBuildBSP.TabIndex = 23;
-			lblBuildBSP.Text = "BSP";
-			lblBuildBSP.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
-			// txtBuildToolsDirectory
-			// 
-			txtBuildToolsDirectory.Location = new System.Drawing.Point(10, 44);
-			txtBuildToolsDirectory.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			txtBuildToolsDirectory.Name = "txtBuildToolsDirectory";
-			txtBuildToolsDirectory.Size = new System.Drawing.Size(412, 23);
-			txtBuildToolsDirectory.TabIndex = 22;
-			txtBuildToolsDirectory.Text = "example: C:\\hammer_alt";
-			txtBuildToolsDirectory.TextChanged += BuildToolsDirectoryTextChanged;
-			// 
-			// lblBuildCSG
-			// 
-			lblBuildCSG.Location = new System.Drawing.Point(41, 136);
-			lblBuildCSG.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-			lblBuildCSG.Name = "lblBuildCSG";
-			lblBuildCSG.Size = new System.Drawing.Size(40, 23);
-			lblBuildCSG.TabIndex = 24;
-			lblBuildCSG.Text = "CSG";
-			lblBuildCSG.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
-			// cmbRadExe
-			// 
-			cmbRadExe.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			cmbRadExe.FormattingEnabled = true;
-			cmbRadExe.Location = new System.Drawing.Point(88, 197);
-			cmbRadExe.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			cmbRadExe.Name = "cmbRadExe";
-			cmbRadExe.Size = new System.Drawing.Size(178, 23);
-			cmbRadExe.TabIndex = 28;
-			// 
-			// cmbBspExe
-			// 
-			cmbBspExe.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			cmbBspExe.FormattingEnabled = true;
-			cmbBspExe.Location = new System.Drawing.Point(88, 104);
-			cmbBspExe.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			cmbBspExe.Name = "cmbBspExe";
-			cmbBspExe.Size = new System.Drawing.Size(178, 23);
-			cmbBspExe.TabIndex = 29;
-			// 
-			// lblBuildVIS
-			// 
-			lblBuildVIS.Location = new System.Drawing.Point(41, 167);
-			lblBuildVIS.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-			lblBuildVIS.Name = "lblBuildVIS";
-			lblBuildVIS.Size = new System.Drawing.Size(40, 23);
-			lblBuildVIS.TabIndex = 25;
-			lblBuildVIS.Text = "VIS";
-			lblBuildVIS.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
-			// cmbVisExe
-			// 
-			cmbVisExe.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			cmbVisExe.FormattingEnabled = true;
-			cmbVisExe.Location = new System.Drawing.Point(88, 166);
-			cmbVisExe.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			cmbVisExe.Name = "cmbVisExe";
-			cmbVisExe.Size = new System.Drawing.Size(178, 23);
-			cmbVisExe.TabIndex = 30;
-			// 
-			// cmbCsgExe
-			// 
-			cmbCsgExe.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-			cmbCsgExe.FormattingEnabled = true;
-			cmbCsgExe.Location = new System.Drawing.Point(88, 135);
-			cmbCsgExe.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
-			cmbCsgExe.Name = "cmbCsgExe";
-			cmbCsgExe.Size = new System.Drawing.Size(178, 23);
-			cmbCsgExe.TabIndex = 31;
-			// 
-			// lblBuildRAD
-			// 
-			lblBuildRAD.Location = new System.Drawing.Point(41, 198);
-			lblBuildRAD.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
-			lblBuildRAD.Name = "lblBuildRAD";
-			lblBuildRAD.Size = new System.Drawing.Size(40, 23);
-			lblBuildRAD.TabIndex = 26;
-			lblBuildRAD.Text = "RAD";
-			lblBuildRAD.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
-			// 
-			// btnBuildToolsBrowse
-			// 
-			btnBuildToolsBrowse.Location = new System.Drawing.Point(430, 44);
+            // 
+            // lblBuildCompiler
+            // 
+            lblBuildCompiler.Location = new System.Drawing.Point(10, 105);
+            lblBuildCompiler.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            lblBuildCompiler.Name = "lblBuildCompiler";
+            lblBuildCompiler.Size = new System.Drawing.Size(71, 23);
+            lblBuildCompiler.TabIndex = 23;
+            lblBuildCompiler.Text = "Compiler";
+            lblBuildCompiler.TextAlign = System.Drawing.ContentAlignment.MiddleRight;
+            // 
+            // txtBuildToolsDirectory
+            // 
+            txtBuildToolsDirectory.Location = new System.Drawing.Point(10, 44);
+            txtBuildToolsDirectory.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            txtBuildToolsDirectory.Name = "txtBuildToolsDirectory";
+            txtBuildToolsDirectory.Size = new System.Drawing.Size(412, 23);
+            txtBuildToolsDirectory.TabIndex = 22;
+            txtBuildToolsDirectory.Text = "example: C:\\hammer_alt";
+            txtBuildToolsDirectory.TextChanged += BuildToolsDirectoryTextChanged;
+            // 
+            // cmbCompilerExe
+            // 
+            cmbCompilerExe.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            cmbCompilerExe.FormattingEnabled = true;
+            cmbCompilerExe.Location = new System.Drawing.Point(88, 104);
+            cmbCompilerExe.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
+            cmbCompilerExe.Name = "cmbCompilerExe";
+            cmbCompilerExe.Size = new System.Drawing.Size(178, 23);
+            cmbCompilerExe.TabIndex = 29;
+            // 
+            // btnBuildToolsBrowse
+            // 
+            btnBuildToolsBrowse.Location = new System.Drawing.Point(430, 44);
 			btnBuildToolsBrowse.Margin = new System.Windows.Forms.Padding(4, 3, 4, 3);
 			btnBuildToolsBrowse.Name = "btnBuildToolsBrowse";
 			btnBuildToolsBrowse.Size = new System.Drawing.Size(86, 23);
@@ -835,15 +763,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
         private System.Windows.Forms.GroupBox grpBuildTools;
         private System.Windows.Forms.CheckBox chkIncludeToolsDirectory;
         private System.Windows.Forms.Label lblBuildExeFolder;
-        private System.Windows.Forms.Label lblBuildBSP;
+        private System.Windows.Forms.Label lblBuildCompiler;
         private System.Windows.Forms.TextBox txtBuildToolsDirectory;
-        private System.Windows.Forms.Label lblBuildCSG;
-        private System.Windows.Forms.ComboBox cmbRadExe;
-        private System.Windows.Forms.ComboBox cmbBspExe;
-        private System.Windows.Forms.Label lblBuildVIS;
-        private System.Windows.Forms.ComboBox cmbVisExe;
-        private System.Windows.Forms.ComboBox cmbCsgExe;
-        private System.Windows.Forms.Label lblBuildRAD;
+        private System.Windows.Forms.ComboBox cmbCompilerExe;
         private System.Windows.Forms.Button btnBuildToolsBrowse;
         private System.Windows.Forms.GroupBox grpTextures;
         private System.Windows.Forms.Label lblCopyToMapFolder;

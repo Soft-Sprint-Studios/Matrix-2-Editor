@@ -61,12 +61,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
 		public string ToolsDirectory { get; set; }
 		public bool IncludeToolsDirectoryInEnvironment { get; set; }
 
-		public string CsgExe { get; set; }
-		public string VisExe { get; set; }
-		public string BspExe { get; set; }
-		public string RadExe { get; set; }
+        public string CompilerExe { get; set; }
 
-		public bool GameCopyBsp { get; set; }
+        public bool GameCopyBsp { get; set; }
 		public bool GameRun { get; set; }
 		public bool GameAsk { get; set; }
 
@@ -259,8 +256,10 @@ namespace Sledge.BspEditor.Environment.Goldsource
 				var workingDir = options.WorkingDirectory ?? Path.Combine(Path.GetTempPath(), Path.GetRandomFileName());
 				if (!Directory.Exists(workingDir)) Directory.CreateDirectory(workingDir);
 				b.Variables["WorkingDirectory"] = workingDir;
+                b.Variables["BaseDirectory"] = BaseDirectory;
+                b.Variables["ModDirectoryPath"] = Path.Combine(BaseDirectory, ModDirectory);
 
-				await Oy.Publish("Compile:Debug", $"Working directory is: {workingDir}\r\n");
+                await Oy.Publish("Compile:Debug", $"Working directory is: {workingDir}\r\n");
 			}));
 
 			// Save the file to the working directory
@@ -298,16 +297,13 @@ namespace Sledge.BspEditor.Environment.Goldsource
 				await Oy.Publish("Compile:Debug", $"Map file is: {path}\r\n");
 			}));
 
-			// Run the compile tools
-			if (args.ContainsKey("PreTool")) batch.Steps.AddRange(args["PreTool"].Split('\n').Select(x => new CommandProcess(BatchStepType.RunBuildExecutable, x)));
-			if (args.ContainsKey("CSG")) batch.Steps.Add(new BatchProcess(BatchStepType.RunBuildExecutable, Path.Combine(ToolsDirectory, CsgExe), args["CSG"] + " \"{MapFile}\""));
-			if (args.ContainsKey("BSP")) batch.Steps.Add(new BatchProcess(BatchStepType.RunBuildExecutable, Path.Combine(ToolsDirectory, BspExe), args["BSP"] + " \"{MapFile}\""));
-			if (args.ContainsKey("VIS")) batch.Steps.Add(new BatchProcess(BatchStepType.RunBuildExecutable, Path.Combine(ToolsDirectory, VisExe), args["VIS"] + " \"{MapFile}\""));
-			if (args.ContainsKey("RAD")) batch.Steps.Add(new BatchProcess(BatchStepType.RunBuildExecutable, Path.Combine(ToolsDirectory, RadExe), args["RAD"] + " \"{MapFile}\""));
-			if (args.ContainsKey("PostTool")) batch.Steps.AddRange(args["PostTool"].Split('\n').Select(x => new CommandProcess(BatchStepType.RunBuildExecutable, x)));
+            // Run the compile tools
+            if (args.ContainsKey("PreTool")) batch.Steps.AddRange(args["PreTool"].Split('\n').Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => new CommandProcess(BatchStepType.RunBuildExecutable, x)));
+            if (args.ContainsKey("COMPILER")) batch.Steps.Add(new BatchProcess(BatchStepType.RunBuildExecutable, Path.Combine(ToolsDirectory, CompilerExe), args["COMPILER"] + " -moddir \"{ModDirectoryPath}\" \"{MapFile}\""));
+            if (args.ContainsKey("PostTool")) batch.Steps.AddRange(args["PostTool"].Split('\n').Where(x => !string.IsNullOrWhiteSpace(x)).Select(x => new CommandProcess(BatchStepType.RunBuildExecutable, x)));
 
-			// Check for errors
-			batch.Steps.Add(new BatchCallback(BatchStepType.CheckIfSuccessful, async (b, d) =>
+            // Check for errors
+            batch.Steps.Add(new BatchCallback(BatchStepType.CheckIfSuccessful, async (b, d) =>
 			{
 				var errFile = Path.ChangeExtension(b.Variables["MapFile"], "err");
 				if (errFile != null && File.Exists(errFile))

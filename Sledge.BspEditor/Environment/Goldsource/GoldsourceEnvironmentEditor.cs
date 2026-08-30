@@ -49,12 +49,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 			txtBuildToolsDirectory.TextChanged += OnEnvironmentChanged;
 			chkIncludeToolsDirectory.CheckedChanged += OnEnvironmentChanged;
-			cmbBspExe.SelectedIndexChanged += OnEnvironmentChanged;
-			cmbCsgExe.SelectedIndexChanged += OnEnvironmentChanged;
-			cmbVisExe.SelectedIndexChanged += OnEnvironmentChanged;
-			cmbRadExe.SelectedIndexChanged += OnEnvironmentChanged;
+            cmbCompilerExe.SelectedIndexChanged += OnEnvironmentChanged;
 
-			chkCopyBsp.CheckedChanged += OnEnvironmentChanged;
+            chkCopyBsp.CheckedChanged += OnEnvironmentChanged;
 			chkRunGame.CheckedChanged += OnEnvironmentChanged;
 			chkAskRunGame.CheckedChanged += OnEnvironmentChanged;
 
@@ -143,12 +140,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 			txtBuildToolsDirectory.Text = env.ToolsDirectory;
 			chkIncludeToolsDirectory.Checked = env.IncludeToolsDirectoryInEnvironment;
-			cmbBspExe.SelectedItem = env.BspExe;
-			cmbCsgExe.SelectedItem = env.CsgExe;
-			cmbVisExe.SelectedItem = env.VisExe;
-			cmbRadExe.SelectedItem = env.RadExe;
+            cmbCompilerExe.SelectedItem = env.CompilerExe;
 
-			chkCopyBsp.Checked = env.GameCopyBsp;
+            chkCopyBsp.Checked = env.GameCopyBsp;
 			chkRunGame.Checked = env.GameRun;
 			chkAskRunGame.Checked = env.GameAsk;
 
@@ -187,12 +181,9 @@ namespace Sledge.BspEditor.Environment.Goldsource
 
 				ToolsDirectory = txtBuildToolsDirectory.Text,
 				IncludeToolsDirectoryInEnvironment = chkIncludeToolsDirectory.Checked,
-				BspExe = Convert.ToString(cmbBspExe.SelectedItem, CultureInfo.InvariantCulture),
-				CsgExe = Convert.ToString(cmbCsgExe.SelectedItem, CultureInfo.InvariantCulture),
-				VisExe = Convert.ToString(cmbVisExe.SelectedItem, CultureInfo.InvariantCulture),
-				RadExe = Convert.ToString(cmbRadExe.SelectedItem, CultureInfo.InvariantCulture),
+                CompilerExe = Convert.ToString(cmbCompilerExe.SelectedItem, CultureInfo.InvariantCulture),
 
-				GameCopyBsp = chkCopyBsp.Checked,
+                GameCopyBsp = chkCopyBsp.Checked,
 				GameRun = chkRunGame.Checked,
 				GameAsk = chkAskRunGame.Checked,
 
@@ -380,41 +371,20 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			var dir = txtBuildToolsDirectory.Text;
 			if (!Directory.Exists(dir)) return;
 
-			var selBsp = cmbBspExe.SelectedItem ?? "";
-			var selCsg = cmbCsgExe.SelectedItem ?? "";
-			var selVis = cmbVisExe.SelectedItem ?? "";
-			var selRad = cmbRadExe.SelectedItem ?? "";
+            var selCompiler = cmbCompilerExe.SelectedItem ?? "";
 
-			cmbBspExe.Items.Clear();
-			cmbCsgExe.Items.Clear();
-			cmbVisExe.Items.Clear();
-			cmbRadExe.Items.Clear();
+            cmbCompilerExe.Items.Clear();
 
-			var range = Directory.GetFiles(dir, "*.exe").Select(Path.GetFileName).ToList();
-			var rangeArr = range.OfType<object>().ToArray();
+            var range = Directory.GetFiles(dir, "*.exe").Select(Path.GetFileName).ToList();
+            var rangeArr = range.OfType<object>().ToArray();
 
-			cmbBspExe.Items.AddRange(rangeArr);
-			cmbCsgExe.Items.AddRange(rangeArr);
-			cmbVisExe.Items.AddRange(rangeArr);
-			cmbRadExe.Items.AddRange(rangeArr);
+            cmbCompilerExe.Items.AddRange(rangeArr);
 
-			cmbBspExe.SelectedIndex = -1;
-			cmbCsgExe.SelectedIndex = -1;
-			cmbVisExe.SelectedIndex = -1;
-			cmbRadExe.SelectedIndex = -1;
+            cmbCompilerExe.SelectedIndex = -1;
 
-			if (cmbBspExe.Items.Contains(selBsp)) cmbBspExe.SelectedItem = selBsp;
-			else if (cmbBspExe.Items.Count > 0) cmbBspExe.SelectedIndex = Math.Max(0, range.FindIndex(x => x.ToLower().Contains("bsp")));
-
-			if (cmbCsgExe.Items.Contains(selCsg)) cmbCsgExe.SelectedItem = selCsg;
-			else if (cmbCsgExe.Items.Count > 0) cmbCsgExe.SelectedIndex = Math.Max(0, range.FindIndex(x => x.ToLower().Contains("csg")));
-
-			if (cmbVisExe.Items.Contains(selVis)) cmbVisExe.SelectedItem = selVis;
-			else if (cmbVisExe.Items.Count > 0) cmbVisExe.SelectedIndex = Math.Max(0, range.FindIndex(x => x.ToLower().Contains("vis")));
-
-			if (cmbRadExe.Items.Contains(selRad)) cmbRadExe.SelectedItem = selRad;
-			else if (cmbRadExe.Items.Count > 0) cmbRadExe.SelectedIndex = Math.Max(0, range.FindIndex(x => x.ToLower().Contains("rad")));
-		}
+            if (cmbCompilerExe.Items.Contains(selCompiler)) cmbCompilerExe.SelectedItem = selCompiler;
+            else if (cmbCompilerExe.Items.Count > 0) cmbCompilerExe.SelectedIndex = Math.Max(0, range.FindIndex(x => x.ToLower().Contains("compiler")));
+        }
 
 		private void BaseGameDirectoryChanged(object sender, EventArgs e)
 		{

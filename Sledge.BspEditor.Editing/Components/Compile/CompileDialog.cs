@@ -163,18 +163,6 @@ namespace Sledge.BspEditor.Editing.Components.Compile
 				btn.Click += (s, e) => UsePreset(pre);
 				PresetTable.Controls.Add(btn);
 			}
-
-			foreach (var profile in _buildProfileRegister.GetProfiles(_specification.Name))
-			{
-				var btn = new Button
-				{
-					Text = profile.Name,
-					Dock = DockStyle.Top,
-					TextAlign = ContentAlignment.MiddleCenter
-				};
-				btn.Click += (s, e) => UseProfile(profile);
-				PresetTable.Controls.Add(btn);
-			}
 		}
 
 		private void PopulateProfiles()
