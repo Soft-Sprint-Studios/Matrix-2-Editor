@@ -484,7 +484,7 @@ namespace Sledge.BspEditor.Environment.Goldsource
 				Path = $"{AutoVisgroupPrefix}.ToolBrushes",
 				Key = $"{AutoVisgroupPrefix}.Skip"
 			};
-			yield return new AutomaticVisgroup(x => x is Solid s && s.Faces.Any(f => string.Equals(f.Texture.Name, "aaatrigger", StringComparison.InvariantCultureIgnoreCase)))
+			yield return new AutomaticVisgroup(x => x is Solid s && s.Faces.Any(f => string.Equals(f.Texture.Name, "trigger", StringComparison.InvariantCultureIgnoreCase)))
 			{
 				Path = $"{AutoVisgroupPrefix}.ToolBrushes",
 				Key = $"{AutoVisgroupPrefix}.Trigger"

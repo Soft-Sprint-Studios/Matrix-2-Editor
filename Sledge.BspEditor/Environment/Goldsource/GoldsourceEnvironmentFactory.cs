@@ -69,7 +69,7 @@ namespace Sledge.BspEditor.Environment.Goldsource
 				DefaultTextureScale = GetVal(environment.Properties, "DefaultTextureScale", 1m),
 				DefaultGridSize = GetVal(environment.Properties, "DefaultGridSize", 16f),
 				CordonTexture = GetVal(environment.Properties, "CordonWrapTexture", "BLACK"),
-				NonRenderableTextures = GetVal(environment.Properties, "NonRenderableTexture", "aaatrigger;sky;null;clip;hint;skip;origin;bevel").Split(';').Select(texture => texture.Trim()).Where(texture => !String.IsNullOrEmpty(texture)).ToArray()
+				NonRenderableTextures = GetVal(environment.Properties, "NonRenderableTexture", "trigger;sky;null;clip;hint;skip;origin;bevel").Split(';').Select(texture => texture.Trim()).Where(texture => !String.IsNullOrEmpty(texture)).ToArray()
 
 			};
 			return gse;
@@ -112,7 +112,7 @@ namespace Sledge.BspEditor.Environment.Goldsource
 				DefaultGridSize = GetVal(environment.Properties, "DefaultGridSize", 16f),
 
 				CordonTexture = GetVal(environment.Properties, "CordonWrapTexture", "BLACK"),
-				NonRenderableTextures = GetVal(environment.Properties, "NonRenderableTexture", "aaatrigger;sky;null;clip;hint;skip;origin;bevel").Split(';').Select(texture => texture.Trim()).Where(texture => !String.IsNullOrEmpty(texture)).ToArray()
+				NonRenderableTextures = GetVal(environment.Properties, "NonRenderableTexture", "trigger;sky;null;clip;hint;skip;origin;bevel").Split(';').Select(texture => texture.Trim()).Where(texture => !String.IsNullOrEmpty(texture)).ToArray()
 			};
 			return gse;
 		}

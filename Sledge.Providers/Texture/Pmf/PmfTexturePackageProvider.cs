@@ -47,7 +47,7 @@ namespace Sledge.Providers.Texture.Pmf
         {
            var specialTextures = new[]
            {
-                "aaatrigger", "trigger", "null", "clip",
+                "trigger", "null", "clip",
                 "hint", "skip", "origin", "solidhint", "boundingbox", "bevel", "water",
                 "monitor", "parallax", "video", "glass"
             };
@@ -181,7 +181,7 @@ namespace Sledge.Providers.Texture.Pmf
             var lower = name.ToLowerInvariant();
             return lower == "null" || lower == "clip" ||
                    lower == "hint" || lower == "skip" || lower == "origin" ||
-                   lower == "aaatrigger" || lower == "trigger" || lower == "solidhint" ||
+                   lower == "trigger" || lower == "solidhint" ||
                    lower == "boundingbox" || lower == "bevel" || lower.StartsWith("water") ||
                    lower.StartsWith("monitor") || lower.StartsWith("parallax") ||
                    lower.StartsWith("video") || lower.StartsWith("glass");
@@ -194,7 +194,7 @@ namespace Sledge.Providers.Texture.Pmf
             Color textColor = Color.White;
             Color borderColor = Color.Black;
 
-            if (lower == "aaatrigger" || lower == "trigger")
+            if (lower == "trigger")
             {
                 bgColor = Color.FromArgb(170, 80, 0); // Orange/Brown trigger
             }

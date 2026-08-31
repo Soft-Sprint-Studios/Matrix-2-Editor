@@ -49,7 +49,7 @@ namespace Sledge.BspEditor.Environment.Goldsource
         {
             switch (name?.ToLower())
             {
-                case "aaatrigger":
+                case "trigger":
                 case "hint":
                 case "clip":
                 case "origin":
