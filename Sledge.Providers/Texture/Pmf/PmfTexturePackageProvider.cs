@@ -49,7 +49,7 @@ namespace Sledge.Providers.Texture.Pmf
            {
                 "trigger", "null", "clip",
                 "hint", "skip", "origin", "solidhint", "boundingbox", "bevel", "water",
-                "monitor", "parallax", "video", "glass"
+                "monitor", "parallax", "video", "glass", "mirror"
             };
             foreach (var st in specialTextures)
             {
@@ -184,7 +184,7 @@ namespace Sledge.Providers.Texture.Pmf
                    lower == "trigger" || lower == "solidhint" ||
                    lower == "boundingbox" || lower == "bevel" || lower.StartsWith("water") ||
                    lower.StartsWith("monitor") || lower.StartsWith("parallax") ||
-                   lower.StartsWith("video") || lower.StartsWith("glass");
+                   lower.StartsWith("video") || lower.StartsWith("glass") || lower.StartsWith("mirror");
         }
 
         public static Bitmap GenerateToolBitmap(string name, int width, int height)
@@ -234,6 +234,10 @@ namespace Sledge.Providers.Texture.Pmf
             else if (lower.StartsWith("monitor"))
             {
                 bgColor = Color.FromArgb(20, 180, 20); // Monitor green
+            }
+            else if (lower.StartsWith("mirror"))
+            {
+                bgColor = Color.FromArgb(100, 180, 190); // Mirror blue-grey
             }
             else if (lower.StartsWith("parallax"))
             {
