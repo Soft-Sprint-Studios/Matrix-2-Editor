@@ -88,7 +88,7 @@ namespace Sledge.Common.Transport
                 tw.Write('"');
                 tw.Write(' ');
                 tw.Write('"');
-                tw.Write(LengthLimit((kv.Value ?? "").Replace('"', '`'), 1024));
+                tw.Write((kv.Value ?? "").Replace('"', '`'));
                 tw.Write('"');
                 tw.WriteLine();
             }
