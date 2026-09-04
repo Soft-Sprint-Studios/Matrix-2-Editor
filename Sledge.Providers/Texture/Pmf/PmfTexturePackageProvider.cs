@@ -47,7 +47,7 @@ namespace Sledge.Providers.Texture.Pmf
         {
            var specialTextures = new[]
            {
-                "trigger", "null", "clip",
+                "trigger", "null", "sky", "clip",
                 "hint", "skip", "origin", "solidhint", "boundingbox", "bevel", "water",
                 "monitor", "parallax", "video", "glass", "mirror"
             };
@@ -179,7 +179,7 @@ namespace Sledge.Providers.Texture.Pmf
         {
             if (string.IsNullOrEmpty(name)) return false;
             var lower = name.ToLowerInvariant();
-            return lower == "null" || lower == "clip" ||
+            return lower == "null" || lower.StartsWith("sky") || lower == "clip" ||
                    lower == "hint" || lower == "skip" || lower == "origin" ||
                    lower == "trigger" || lower == "solidhint" ||
                    lower == "boundingbox" || lower == "bevel" || lower.StartsWith("water") ||
@@ -201,6 +201,10 @@ namespace Sledge.Providers.Texture.Pmf
             else if (lower == "null")
             {
                 bgColor = Color.FromArgb(70, 150, 240); // Blue null
+            }
+            else if (lower.StartsWith("sky"))
+            {
+                bgColor = Color.FromArgb(40, 160, 220); // Sky blue
             }
             else if (lower == "clip")
             {

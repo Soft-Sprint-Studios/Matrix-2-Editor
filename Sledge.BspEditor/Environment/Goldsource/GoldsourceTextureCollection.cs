@@ -54,6 +54,7 @@ namespace Sledge.BspEditor.Environment.Goldsource
                 case "clip":
                 case "origin":
                 case "skip":
+                case "parallax":
                     return 0.5f;
                 default:
                     return 1;
