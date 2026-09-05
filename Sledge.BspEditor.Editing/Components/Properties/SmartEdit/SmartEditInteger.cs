@@ -15,10 +15,11 @@ namespace Sledge.BspEditor.Editing.Components.Properties.SmartEdit
             _numericUpDown = new NumericUpDown
             {
                 Width = 50,
-                Minimum = short.MinValue,
-                Maximum = short.MaxValue,
+                Minimum = -1000000,
+                Maximum = 1000000,
                 Value = 0,
-                DecimalPlaces = 0
+                DecimalPlaces = 4,
+                Increment = 0.1m
             };
             _numericUpDown.ValueChanged += (sender, e) => OnValueChanged();
             Controls.Add(_numericUpDown);
@@ -28,7 +29,7 @@ namespace Sledge.BspEditor.Editing.Components.Properties.SmartEdit
 
         public override bool SupportsType(VariableType type)
         {
-            return type == VariableType.Integer;
+            return type == VariableType.Integer || type == VariableType.Float;
         }
 
         protected override string GetName()
