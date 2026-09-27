@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
+using System.Numerics;
 using System.Windows.Forms;
 using LogicAndTrick.Oy;
 using Sledge.BspEditor.Documents;
@@ -22,6 +23,8 @@ namespace Sledge.BspEditor.Tools.Displacement
         public object Control => this;
 
         [Import] private DisplacementTool _tool;
+        private Face _lastSelectedFace;
+        private bool _syncingPower;
 
         private ComboBox _powerCombo;
         private ComboBox _modeCombo;
@@ -51,6 +54,7 @@ namespace Sledge.BspEditor.Tools.Displacement
             _powerCombo = new ComboBox { Top = 10, Left = 60, Width = 120, DropDownStyle = ComboBoxStyle.DropDownList };
             _powerCombo.Items.AddRange(new object[] { "1", "2", "3", "4", "5" });
             _powerCombo.SelectedIndex = 1;
+            _powerCombo.SelectedIndexChanged += (s, e) => { if (!_syncingPower) UpdateState(); };
 
             _btnCreate = new Button { Text = "Create", Top = 40, Left = 5, Width = 55, Height = 25 };
             _btnCreate.Click += BtnCreate_Click;
@@ -204,7 +208,28 @@ namespace Sledge.BspEditor.Tools.Displacement
             bool hasFace = _tool?.SelectedFaces.Count > 0;
             bool hasDisp = hasFace && _tool.SelectedFaces.Any(x => x.Face.Displacement != null);
 
-            _btnCreate.Enabled = hasFace && _tool.SelectedFaces.Any(x => x.Face.Displacement == null && x.Face.Vertices.Count >= 4);
+            if (hasDisp && !_powerCombo.DroppedDown)
+            {
+                var currentPrimary = _tool.SelectedFaces.FirstOrDefault(x => x.Face.Displacement != null).Face;
+                if (currentPrimary != null && _lastSelectedFace != currentPrimary)
+                {
+                    _syncingPower = true;
+                    _powerCombo.SelectedItem = currentPrimary.Displacement.Power.ToString();
+                    _syncingPower = false;
+                    _lastSelectedFace = currentPrimary;
+                }
+            }
+            else if (!hasDisp)
+            {
+                _lastSelectedFace = null;
+            }
+
+            int selectedPower = int.TryParse(_powerCombo.SelectedItem?.ToString(), out var sp) ? sp : 3;
+
+            _btnCreate.Enabled = hasFace && _tool.SelectedFaces.Any(x =>
+                  x.Face.Vertices.Count >= 4 &&
+                  (x.Face.Displacement == null || x.Face.Displacement.Power != selectedPower)
+              );
             _btnDestroy.Enabled = hasDisp;
             _btnSew.Enabled = hasDisp && _tool.SelectedFaces.Count(x => x.Face.Displacement != null) > 1;
             _btnInvertAlpha.Enabled = hasDisp;
@@ -245,25 +270,42 @@ namespace Sledge.BspEditor.Tools.Displacement
             if (doc == null) return;
 
             var transaction = new Transaction();
-            var power = _powerCombo.SelectedIndex + 2;
+            var power = int.TryParse(_powerCombo.SelectedItem?.ToString(), out var pVal) ? pVal : 3;
             var newSelectedFaces = new List<(Primitives.MapObjects.Solid Solid, Face Face)>();
 
             foreach (var (solid, face) in _tool.SelectedFaces.ToList())
             {
-                if (face.Displacement != null || face.Vertices.Count < 4)
+                if (face.Vertices.Count < 4 || !solid.Faces.Contains(face))
                 {
                     newSelectedFaces.Add((solid, face));
                     continue;
                 }
 
-                if (!solid.Faces.Contains(face)) continue;
+                if (face.Displacement == null)
+                {
+                    var clone = (Face)face.Clone();
+                    clone.Displacement = new Primitives.MapObjectData.Displacement(power, face.Vertices.ToArray());
 
-                var clone = (Face)face.Clone();
-                clone.Displacement = new Primitives.MapObjectData.Displacement(power, face.Vertices.ToArray());
+                    transaction.Add(new RemoveMapObjectData(solid.ID, face));
+                    transaction.Add(new AddMapObjectData(solid.ID, clone));
+                    newSelectedFaces.Add((solid, clone));
+                }
+                else if (face.Displacement.Power != power)
+                {
+                    var clone = (Face)face.Clone();
+                    var corners = (face.Displacement.Corners != null && face.Displacement.Corners.Length == 4)
+                        ? face.Displacement.Corners
+                        : face.Vertices.ToArray();
+                    clone.Displacement = ResampleDisplacement(face.Displacement, power, corners);
 
-                transaction.Add(new RemoveMapObjectData(solid.ID, face));
-                transaction.Add(new AddMapObjectData(solid.ID, clone));
-                newSelectedFaces.Add((solid, clone));
+                    transaction.Add(new RemoveMapObjectData(solid.ID, face));
+                    transaction.Add(new AddMapObjectData(solid.ID, clone));
+                    newSelectedFaces.Add((solid, clone));
+                }
+                else
+                {
+                    newSelectedFaces.Add((solid, face));
+                }
             }
 
             if (!transaction.IsEmpty)
@@ -271,6 +313,7 @@ namespace Sledge.BspEditor.Tools.Displacement
                 MapDocumentOperation.Perform(doc, transaction);
                 _tool.SelectedFaces = newSelectedFaces;
             }
+            _lastSelectedFace = null;
             UpdateState();
         }
 
@@ -326,6 +369,69 @@ namespace Sledge.BspEditor.Tools.Displacement
                 _tool.InvertSelectedDisplacementAlphas();
                 UpdateState();
             }
+        }
+
+        private static Primitives.MapObjectData.Displacement ResampleDisplacement(Primitives.MapObjectData.Displacement origDisp, int newPower, Vector3[] corners)
+        {
+            var newDisp = new Primitives.MapObjectData.Displacement(newPower, corners);
+            newDisp.Texture2Name = origDisp.Texture2Name ?? "";
+
+            int oldSide = (1 << origDisp.Power) + 1;
+            int newSide = (1 << newPower) + 1;
+
+            for (int ny = 0; ny < newSide; ny++)
+            {
+                float v = (float)ny / (newSide - 1);
+                float gy = v * (oldSide - 1);
+                int y0 = (int)MathF.Floor(gy);
+                int y1 = Math.Min(y0 + 1, oldSide - 1);
+                float ry = gy - y0;
+
+                for (int nx = 0; nx < newSide; nx++)
+                {
+                    float u = (float)nx / (newSide - 1);
+                    float gx = u * (oldSide - 1);
+                    int x0 = (int)MathF.Floor(gx);
+                    int x1 = Math.Min(x0 + 1, oldSide - 1);
+                    float rx = gx - x0;
+
+                    Vector3 o00 = GetDispOffset(origDisp, oldSide, x0, y0);
+                    Vector3 o10 = GetDispOffset(origDisp, oldSide, x1, y0);
+                    Vector3 o01 = GetDispOffset(origDisp, oldSide, x0, y1);
+                    Vector3 o11 = GetDispOffset(origDisp, oldSide, x1, y1);
+                    Vector3 interpOffset = Vector3.Lerp(Vector3.Lerp(o00, o10, rx), Vector3.Lerp(o01, o11, rx), ry);
+
+                    float a00 = GetDispAlpha(origDisp, oldSide, x0, y0);
+                    float a10 = GetDispAlpha(origDisp, oldSide, x1, y0);
+                    float a01 = GetDispAlpha(origDisp, oldSide, x0, y1);
+                    float a11 = GetDispAlpha(origDisp, oldSide, x1, y1);
+                    float interpAlpha = (1 - ry) * ((1 - rx) * a00 + rx * a10) + ry * ((1 - rx) * a01 + rx * a11);
+
+                    int nidx = ny * newSide + nx;
+                    float dist = interpOffset.Length();
+                    newDisp.Distances[nidx] = dist;
+                    newDisp.Vectors[nidx] = dist > 0.0001f ? Vector3.Normalize(interpOffset) : Vector3.UnitZ;
+                    newDisp.Alphas[nidx] = Math.Clamp(interpAlpha, 0f, 255f);
+                }
+            }
+
+            return newDisp;
+        }
+
+        private static Vector3 GetDispOffset(Primitives.MapObjectData.Displacement disp, int side, int x, int y)
+        {
+            int idx = y * side + x;
+            if (disp.Vectors == null || disp.Distances == null || idx >= disp.Vectors.Length || idx >= disp.Distances.Length)
+                return Vector3.Zero;
+            return disp.Vectors[idx] * disp.Distances[idx];
+        }
+
+        private static float GetDispAlpha(Primitives.MapObjectData.Displacement disp, int side, int x, int y)
+        {
+            int idx = y * side + x;
+            if (disp.Alphas == null || idx >= disp.Alphas.Length)
+                return 0f;
+            return disp.Alphas[idx];
         }
     }
 }

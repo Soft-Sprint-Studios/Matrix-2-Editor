@@ -355,12 +355,12 @@ namespace Sledge.BspEditor.Environment.Goldsource
 			}));
 
 			// Delete temp directory
-			batch.Steps.Add(new BatchCallback(BatchStepType.DeleteWorkingDirectory, (b, d) =>
-			{
-				var workingDir = b.Variables["WorkingDirectory"];
-				if (Directory.Exists(workingDir)) Directory.Delete(workingDir, true);
-				return Task.CompletedTask;
-			}));
+			//batch.Steps.Add(new BatchCallback(BatchStepType.DeleteWorkingDirectory, (b, d) =>
+			//{
+			//	var workingDir = b.Variables["WorkingDirectory"];
+			//	if (Directory.Exists(workingDir)) Directory.Delete(workingDir, true);
+			//	return Task.CompletedTask;
+			//}));
 
 			if (options.RunGame ?? GameRun)
 			{

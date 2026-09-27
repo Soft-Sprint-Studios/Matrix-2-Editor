@@ -100,7 +100,7 @@ namespace Sledge.BspEditor.Tools.Vertex.Tools
                     var obj = solid.Copy;
                     foreach (var face in obj.Faces.ToList())
                     {
-                        if (face.Vertices.Count <= 3) continue;
+                        if (face.Vertices.Count <= 3 || face.Displacement != null) continue;
 
                         var tris = new List<MutableFace>();
                         for (int i = 0; i < face.Vertices.Count - 2; i++)
@@ -292,6 +292,7 @@ namespace Sledge.BspEditor.Tools.Vertex.Tools
                 foreach (var faces in groupedFaces)
                 {
                     var face = faces.First();
+                    if (faces.Any(f => f.Displacement != null)) continue;
 
                     var pg = poly.Polygons.FirstOrDefault(x => x.Plane.EquivalentTo(face.Plane, 0.0075f)); // Magic number that seems to match VHE
                     if (pg != null && faces.Count() == 1)

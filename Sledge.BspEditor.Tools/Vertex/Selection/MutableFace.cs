@@ -16,11 +16,13 @@ namespace Sledge.BspEditor.Tools.Vertex.Selection
         public Primitives.Texture Texture { get; set; }
         public Plane Plane => new Plane(Vertices[0].Position, Vertices[1].Position, Vertices[2].Position);
         public Vector3 Origin => Vertices.Aggregate(Vector3.Zero, (a, b) => a + b.Position) / Vertices.Count;
+        public Sledge.BspEditor.Primitives.MapObjectData.Displacement Displacement { get; set; }
 
         public MutableFace(Face face)
         {
             Vertices = new ThreadSafeList<MutableVertex>(face.Vertices.Select(x => new MutableVertex(x)));
             Texture = face.Texture.Clone();
+            if (face.Displacement != null) Displacement = face.Displacement.Clone();
         }
 
 		public Polygon ToPolygon()
@@ -82,6 +84,13 @@ namespace Sledge.BspEditor.Tools.Vertex.Selection
             };
 
             f.Vertices.AddRange(Vertices.Select(x => x.Position));
+            if (Displacement != null && f.Vertices.Count == 4)
+            {
+                f.Displacement = Displacement.Clone();
+                if (f.Displacement.Corners == null || f.Displacement.Corners.Length != 4)
+                    f.Displacement.Corners = new Vector3[4];
+                for (int i = 0; i < 4; i++) f.Displacement.Corners[i] = f.Vertices[i];
+            }
 
             return f;
         }
