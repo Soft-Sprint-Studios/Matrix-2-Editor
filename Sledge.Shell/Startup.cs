@@ -73,18 +73,10 @@ namespace Sledge.Shell
 
 			Oy.UnhandledException += (s, e) => UnhandledException(e.Exception);
 
-			var shell = container.GetExport<Forms.Shell>().Value;
-			var si = new SingleInstance(shell);
-			
+            var shell = container.GetExport<Forms.Shell>().Value;
 
-			si.UnhandledException += (s, e) =>
-			{
-				e.ExitApplication = false;
-				UnhandledException(e.Exception);
-			};
-
-			si.Run(Environment.GetCommandLineArgs());
-		}
+            Application.Run(shell);
+        }
 
 		private static void UnhandledException(Exception ex)
 		{
