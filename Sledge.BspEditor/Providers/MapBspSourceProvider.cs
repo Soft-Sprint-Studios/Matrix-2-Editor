@@ -390,6 +390,8 @@ namespace Sledge.BspEditor.Providers
                 strings.Add("face_id");
                 strings.Add(face.ID.ToString(CultureInfo.InvariantCulture));
             }
+            strings.Add("lightmapscale");
+            strings.Add((face.Texture.LightmapScale ?? 16f).ToString("0.0000", CultureInfo.InvariantCulture));
             sw.WriteLine(String.Join(" ", strings));
 		}
 

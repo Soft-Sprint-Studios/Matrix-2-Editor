@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Numerics;
 using System.Runtime.Serialization;
 using Sledge.DataStructures.Geometric;
@@ -32,6 +32,9 @@ namespace Sledge.BspEditor.Primitives
         public float YShift { get; set; }
         public float YScale { get; set; }
 
+        public float? LightmapScale { get; set; }
+
+
         public Texture()
         {
             Name = "";
@@ -40,6 +43,7 @@ namespace Sledge.BspEditor.Primitives
             _vAxis = Vector3.UnitX;
             XShift = YShift = 0;
             XScale = YScale = 1;
+            LightmapScale = 16;
         }
 
         protected Texture(SerializationInfo info, StreamingContext context)
@@ -52,6 +56,9 @@ namespace Sledge.BspEditor.Primitives
             XScale = info.GetSingle("XScale");
             YShift = info.GetSingle("YShift");
             YScale = info.GetSingle("YScale");
+            var lightmap = info.GetValue("lightmapscale", typeof(float));
+            if (lightmap != null)
+                LightmapScale = (float)lightmap;
         }
 
         public void GetObjectData(SerializationInfo info, StreamingContext context)
@@ -64,6 +71,8 @@ namespace Sledge.BspEditor.Primitives
             info.AddValue("XScale", XScale);
             info.AddValue("YShift", YShift);
             info.AddValue("YScale", YScale);
+            if (LightmapScale != null)
+                info.AddValue("lightmapscale", LightmapScale);
         }
 
         public Vector3 GetNormal()
@@ -94,7 +103,8 @@ namespace Sledge.BspEditor.Primitives
                 XShift = XShift,
                 XScale = XScale,
                 YShift = YShift,
-                YScale = YScale
+                YScale = YScale,
+                LightmapScale = LightmapScale
             };
         }
         

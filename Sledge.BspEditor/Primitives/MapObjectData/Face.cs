@@ -25,8 +25,9 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 		/// Used for lightmap UVs
 		/// </summary>
 		public Vector2[] Uv1 { get; set; }
+        public float? LightmapScale { get; set; }
 
-		public Plane Plane
+        public Plane Plane
 		{
 			get => Vertices.Plane;
 			set => Vertices.Plane = value;
@@ -100,6 +101,9 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 				Texture.XShift = t.Get("XShift", 0f);
 				Texture.YScale = t.Get("YScale", 1f);
 				Texture.YShift = t.Get("YShift", 0f);
+				var ls = t.Get("LightmapScale", float.MinValue);
+                if(ls!=float.MinValue)
+                    Texture.LightmapScale = ls;
 			}
 
 			Vertices = new VertexCollection();
@@ -159,6 +163,9 @@ namespace Sledge.BspEditor.Primitives.MapObjectData
 				t.Set("XShift", Texture.XShift);
 				t.Set("YScale", Texture.YScale);
 				t.Set("YShift", Texture.YShift);
+				if (Texture.LightmapScale != null)
+                    t.Set("LightmapScale", Texture.LightmapScale);
+
 				so.Children.Add(t);
 			}
 			foreach (var c in Vertices)
